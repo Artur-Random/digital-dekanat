@@ -35,7 +35,7 @@ export default async function StaffApplicationPage({ params }: Props) {
         </dd>
         <dt className="text-ink-muted">Статус</dt>
         <dd className="font-medium" data-testid="application-status">
-          {statusTitle(stages, app.status)}
+          {statusTitle(stages, app.status, app.branch)}
         </dd>
         <dt className="text-ink-muted">Поступило</dt>
         <dd>{formatDay(app.createdAt)}</dd>
@@ -48,7 +48,7 @@ export default async function StaffApplicationPage({ params }: Props) {
       </dl>
       <h2 className="mt-8 text-lg font-semibold">История</h2>
       <div className="mt-3">
-        <ApplicationHistory events={app.events} stages={stages} />
+        <ApplicationHistory events={app.events} stages={stages} branch={app.branch} />
       </div>
     </>
   );

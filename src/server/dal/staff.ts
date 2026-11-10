@@ -24,6 +24,7 @@ export async function listUnitApplications(actor: StaffActor) {
     select: {
       id: true,
       status: true,
+      branch: true,
       createdAt: true,
       stageDeadline: true,
       type: { select: { title: true, stages: true } },
@@ -39,6 +40,7 @@ export async function getUnitApplication(actor: StaffActor, id: string) {
     select: {
       id: true,
       status: true,
+      branch: true,
       createdAt: true,
       stageDeadline: true,
       willBringOriginal: true,

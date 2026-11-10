@@ -33,8 +33,8 @@ describe("сброс демо-данных", () => {
       students: 2,
       staff: 2,
       groups: 2,
-      applications: 3,
-      applicationEvents: 6,
+      applications: 4,
+      applicationEvents: 7,
     };
     expect(await resetDemoData({ today: "2026-11-10" })).toEqual(expected);
     expect(await resetDemoData({ today: "2026-11-10" })).toEqual(expected);

@@ -10,9 +10,9 @@ type HistoryEvent = {
   createdAt: Date;
 };
 
-type ApplicationHistoryProps = { events: HistoryEvent[]; stages: StageBranch[] };
+type ApplicationHistoryProps = { events: HistoryEvent[]; stages: StageBranch[]; branch: string };
 
-export function ApplicationHistory({ events, stages }: ApplicationHistoryProps) {
+export function ApplicationHistory({ events, stages, branch }: ApplicationHistoryProps) {
   if (events.length === 0) {
     return <p className="text-ink-muted">История пока пустая.</p>;
   }
@@ -20,7 +20,7 @@ export function ApplicationHistory({ events, stages }: ApplicationHistoryProps) 
     <ol className="border-border flex flex-col gap-4 border-l-2 pl-4">
       {events.map((event) => (
         <li key={event.id}>
-          <p className="font-medium">{statusTitle(stages, event.toStatus)}</p>
+          <p className="font-medium">{statusTitle(stages, event.toStatus, branch)}</p>
           <p className="text-ink-muted text-sm">
             <time dateTime={event.createdAt.toISOString()}>{formatDayTime(event.createdAt)}</time>
           </p>

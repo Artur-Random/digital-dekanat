@@ -12,13 +12,19 @@ test.describe.configure({ mode: "serial" });
 const LOGIN_ERROR = "Неверный логин или пароль.";
 const isProductionRun = process.env.E2E_PRODUCTION === "1";
 
-let ids: { alinaCert: string; alinaExtension: string; denisSummons: string };
+let ids: {
+  alinaCert: string;
+  alinaExtension: string;
+  denisSummons: string;
+  denisLeave: string;
+};
 
 test.beforeAll(async () => {
   ids = {
     alinaCert: await applicationId("alina", "CERT_ENROLLMENT"),
     alinaExtension: await applicationId("alina", "PA_EXTENSION"),
     denisSummons: await applicationId("denis", "CERT_SUMMONS"),
+    denisLeave: await applicationId("denis", "ACADEMIC_LEAVE"),
   };
 });
 
@@ -74,6 +80,56 @@ test("6. dekanat не открывает справку Дениса из МФЦ
   await expectStatus(page, `/staff/applications/${ids.denisSummons}`, 404);
   // Сотрудник тоже не открывает страницы студента.
   await expectStatus(page, `/applications/${ids.alinaExtension}`, 404);
+});
+
+/** ID заявок, на которые есть ссылки в очереди E1. */
+async function queueIds(page: Page): Promise<string[]> {
+  await page.goto("/staff");
+  const hrefs = await page
+    .locator('a[href^="/staff/applications/"]')
+    .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+  return hrefs.map((h) => h.split("/").pop() ?? "");
+}
+
+/** ID заявок в списке S4 студента. */
+async function studentListIds(page: Page): Promise<string[]> {
+  await page.goto("/applications");
+  const hrefs = await page
+    .locator('a[href^="/applications/"]')
+    .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+  return hrefs.map((h) => h.split("/").pop() ?? "");
+}
+
+test("6а. очереди подразделений: академический отпуск у МФЦ (N-45), продление у деканата", async ({
+  page,
+}) => {
+  await loginAs(page, "mfc");
+  const mfcQueue = await queueIds(page);
+  expect(mfcQueue).toEqual(
+    expect.arrayContaining([ids.alinaCert, ids.denisSummons, ids.denisLeave]),
+  );
+  expect(mfcQueue).not.toContain(ids.alinaExtension);
+  await expectStatus(page, `/staff/applications/${ids.denisLeave}`, 200);
+
+  await page.context().clearCookies();
+  await loginAs(page, "dekanat");
+  const dekanatQueue = await queueIds(page);
+  expect(dekanatQueue).toEqual([ids.alinaExtension]);
+  await expectStatus(page, `/staff/applications/${ids.denisLeave}`, 404);
+  await expectStatus(page, `/staff/applications/${ids.alinaCert}`, 404);
+});
+
+test("6б. заявление на академический отпуск видит только его автор", async ({ page }) => {
+  await loginAs(page, "alina");
+  await expectStatus(page, `/applications/${ids.denisLeave}`, 404);
+  expect(await studentListIds(page)).not.toContain(ids.denisLeave);
+
+  await page.context().clearCookies();
+  await loginAs(page, "denis");
+  expect(await studentListIds(page)).toEqual(
+    expect.arrayContaining([ids.denisLeave, ids.denisSummons]),
+  );
+  await expectStatus(page, `/applications/${ids.denisLeave}`, 200);
 });
 
 test("7. одинаковая ошибка при неверном пароле и несуществующем логине", async ({ page }) => {
