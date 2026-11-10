@@ -15,6 +15,11 @@ describe("safeNextPath", () => {
     "",
     "/login",
     "/login?next=/",
+    // Нормализация «.» и «..» даёт «//evil.example» (находка security-reviewer).
+    "/.//evil.example",
+    "/%2e%2e//evil.example",
+    "/x/..//evil.example",
+    "/staff/../profile",
   ])("отбрасывает %j", (input) => {
     expect(safeNextPath(input)).toBeNull();
   });
@@ -23,7 +28,6 @@ describe("safeNextPath", () => {
     ["/", "/"],
     ["/profile", "/profile"],
     ["/applications/abc?x=1#y", "/applications/abc?x=1#y"],
-    ["/staff/../profile", "/profile"],
   ])("принимает %j", (input, expected) => {
     expect(safeNextPath(input)).toBe(expected);
   });
