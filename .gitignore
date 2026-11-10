@@ -147,3 +147,12 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+/src/generated/prisma
+
+# Playwright
+test-results/
+playwright-report/
+
+# Next.js: генерируется при dev/build
+next-env.d.ts
