@@ -10,7 +10,8 @@ import { chromium } from "@playwright/test";
 
 import { prepareForScreen } from "../e2e/auth";
 import { BASE_URL } from "../e2e/base-url";
-import { SCREENS, VIEWPORTS } from "../e2e/screens";
+import { disconnect } from "../e2e/helpers/db";
+import { SCREENS, VIEWPORTS, resolvePath } from "../e2e/screens";
 
 function moscowStamp(date: Date): string {
   const parts = new Intl.DateTimeFormat("ru-RU", {
@@ -78,11 +79,10 @@ async function main(): Promise<void> {
       for (const screen of SCREENS) {
         const page = await context.newPage();
         await prepareForScreen(page, screen);
-        const response = await page.goto(screen.path, { waitUntil: "networkidle" });
+        const path = await resolvePath(screen);
+        const response = await page.goto(path, { waitUntil: "networkidle" });
         if (!response?.ok()) {
-          throw new Error(
-            `${screen.code} ${screen.path}: HTTP ${response?.status() ?? "нет ответа"}`,
-          );
+          throw new Error(`${screen.code} ${path}: HTTP ${response?.status() ?? "нет ответа"}`);
         }
         const file = join(outDir, `${screen.code}-${screen.slug}-${viewport.width}.png`);
         await page.screenshot({ path: file, fullPage: true });
@@ -93,6 +93,7 @@ async function main(): Promise<void> {
     }
   } finally {
     await browser.close();
+    await disconnect();
     stopServer(server);
   }
 }
