@@ -34,7 +34,7 @@ export default async function StudentApplicationPage({ params }: Props) {
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
         <dt className="text-ink-muted">Статус</dt>
         <dd className="font-medium" data-testid="application-status">
-          {statusTitle(stages, app.status)}
+          {statusTitle(stages, app.status, app.branch)}
         </dd>
         <dt className="text-ink-muted">Обрабатывает</dt>
         <dd>{app.unit.name}</dd>
@@ -49,7 +49,7 @@ export default async function StudentApplicationPage({ params }: Props) {
       </dl>
       <h2 className="mt-8 text-lg font-semibold">История</h2>
       <div className="mt-3">
-        <ApplicationHistory events={app.events} stages={stages} />
+        <ApplicationHistory events={app.events} stages={stages} branch={app.branch} />
       </div>
     </>
   );

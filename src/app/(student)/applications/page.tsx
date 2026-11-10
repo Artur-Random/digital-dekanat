@@ -32,7 +32,7 @@ export default async function ApplicationsPage() {
                 <span>
                   <span className="block font-medium">{app.type.title}</span>
                   <span className="text-ink-muted block text-sm">
-                    {statusTitle(parseStages(app.type.stages), app.status)} · от{" "}
+                    {statusTitle(parseStages(app.type.stages), app.status, app.branch)} · от{" "}
                     {formatDay(app.createdAt)}
                   </span>
                 </span>

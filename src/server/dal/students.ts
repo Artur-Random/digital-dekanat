@@ -35,6 +35,7 @@ export async function listStudentApplications(actor: StudentActor) {
     select: {
       id: true,
       status: true,
+      branch: true,
       createdAt: true,
       stageDeadline: true,
       type: { select: { title: true, stages: true } },
@@ -50,6 +51,7 @@ export async function getStudentApplication(actor: StudentActor, id: string) {
     select: {
       id: true,
       status: true,
+      branch: true,
       createdAt: true,
       stageDeadline: true,
       willBringOriginal: true,
