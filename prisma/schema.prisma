@@ -1,4 +1,5 @@
-// Схема данных прототипа. Модели появятся в задании 2 (см. docs/spec-v1.md, раздел 4).
+// Схема данных прототипа по docs/spec-v1.md, раздел 4.
+// Принцип: правила зависят от уровня образования и хранятся в справочниках, а не в коде.
 
 generator client {
   provider = "prisma-client"
@@ -7,4 +8,513 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Перечисления
+// ---------------------------------------------------------------------------
+
+enum EducationLevelCode {
+  BACHELOR
+  SPECIALIST
+  MASTER
+  SPECIALIZED_MASTER
+  BASIC_HE
+  SPO
+  POSTGRAD
+  ASSISTANTSHIP
+}
+
+/// Форма контроля: экзамен, дифференцированный зачёт, зачёт.
+enum ControlForm {
+  EXAM
+  DIFF_CREDIT
+  CREDIT
+}
+
+enum GradeValue {
+  EXCELLENT
+  GOOD
+  SATISFACTORY
+  UNSATISFACTORY
+  PASSED
+  FAILED
+}
+
+enum Role {
+  STUDENT
+  STAFF
+}
+
+enum UnitCode {
+  MFC
+  DEKANAT
+  MILITARY
+}
+
+/// Форма обучения: очная, очно-заочная, заочная.
+enum StudyForm {
+  FULL_TIME
+  PART_TIME
+  EXTRAMURAL
+}
+
+/// Основа обучения: бюджет, контракт.
+enum Funding {
+  BUDGET
+  CONTRACT
+}
+
+enum RuleTrigger {
+  DEBT_STAGE_1
+  DEBT_STAGE_2
+  GRADE_SATISFACTORY
+  NO_SHOW
+  ABSENCE_NOTICE
+}
+
+enum HolidayKind {
+  /// Нерабочий праздничный день (ТК РФ, ст. 112).
+  PUBLIC_HOLIDAY
+  /// Выходной, перенесённый постановлением Правительства РФ.
+  TRANSFERRED_DAY_OFF
+}
+
+enum ScheduleEventType {
+  LECTURE
+  SEMINAR
+  CREDIT
+  EXAM
+  RETAKE_1
+  RETAKE_2
+}
+
+/// Формат проведения (N-15: очный или дистанционный).
+enum DeliveryFormat {
+  OFFLINE
+  ONLINE
+}
+
+enum ScheduleChangeField {
+  START_TIME
+  ROOM
+  TEACHER
+  FORMAT
+}
+
+enum DebtStage {
+  STAGE_1
+  STAGE_2
+}
+
+enum DebtStatus {
+  OPEN
+  LIQUIDATED
+}
+
+enum ApplicationTypeCode {
+  CERT_ENROLLMENT
+  CERT_GRADES
+  CERT_SUMMONS
+  CERT_MILITARY
+  PA_EXTENSION
+  ACADEMIC_LEAVE
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  IN_PROGRESS
+  READY
+  UNDER_REVIEW
+  SENT_TO_COMMISSION
+  APPROVED
+  REJECTED
+  ORDER_SIGNED
+  CANCELLED
+}
+
+enum NotificationType {
+  SCHEDULE_CHANGE
+  RETAKE
+  APPLICATION_STATUS
+  DEADLINE
+  ANNOUNCEMENT
+}
+
+// ---------------------------------------------------------------------------
+// Справочники и правила
+// ---------------------------------------------------------------------------
+
+model EducationLevel {
+  id          String             @id @default(cuid())
+  code        EducationLevelCode @unique
+  name        String
+  /// Правила аттестации заполнены (BACHELOR, MASTER, SPECIALIZED_MASTER, N-01).
+  rulesFilled Boolean            @default(false)
+
+  gradeBands       GradeBand[]
+  rules            Rule[]
+  groups           Group[]
+  students         StudentProfile[]
+  applicationTypes ApplicationType[]
+}
+
+model GradeBand {
+  id          String      @id @default(cuid())
+  levelId     String
+  controlForm ControlForm
+  minScore    Int
+  maxScore    Int
+  grade       GradeValue
+  isPositive  Boolean
+  normCode    String
+
+  level EducationLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@unique([levelId, controlForm, grade])
+  @@index([levelId])
+}
+
+model ApplicationType {
+  id                String              @id @default(cuid())
+  code              ApplicationTypeCode @unique
+  title             String
+  unitId            String
+  /// Только информационная карточка без формы (справка для военкомата).
+  isInformational   Boolean             @default(false)
+  description       String?
+  /// Ветки этапов: [{ code, title, stages: [{ status, title, deadlineDays, normCode, assumption }] }].
+  stages            Json
+  /// Поля формы мастера: [{ name, label, kind, required }].
+  formFields        Json
+  /// Требуемые документы: [{ title, normCode }].
+  requiredDocuments Json
+  normCodes         String[]
+
+  unit         Unit             @relation(fields: [unitId], references: [id])
+  levels       EducationLevel[]
+  applications Application[]
+
+  @@index([unitId])
+}
+
+model Rule {
+  id        String      @id @default(cuid())
+  levelId   String
+  trigger   RuleTrigger
+  title     String
+  body      String
+  normCodes String[]
+
+  level EducationLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
+
+  @@index([levelId, trigger])
+}
+
+/// Нормы из docs/norms-registry.md. Заполняются только парсингом реестра.
+model Norm {
+  id       String @id @default(cuid())
+  code     String @unique
+  document String
+  clause   String
+  /// У норм закона (273-ФЗ) страницы нет.
+  page     String?
+  quote    String
+}
+
+/// Нерабочие дни производственного календаря (кроме обычных суббот и воскресений).
+model Holiday {
+  id     String      @id @default(cuid())
+  date   DateTime    @unique @db.Date
+  kind   HolidayKind
+  source String
+}
+
+// ---------------------------------------------------------------------------
+// Люди и структура
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  login        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  sessions          Session[]
+  student           StudentProfile?
+  staff             StaffProfile?
+  notifications     Notification[]
+  applicationEvents ApplicationEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  /// SHA-256 от токена из cookie; сам токен не хранится.
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Попытки входа для ограничения перебора. login не внешний ключ: считаем и несуществующие логины.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  login     String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([login, createdAt])
+}
+
+model Unit {
+  id   String   @id @default(cuid())
+  code UnitCode @unique
+  name String
+
+  staff            StaffProfile[]
+  applicationTypes ApplicationType[]
+  applications     Application[]
+}
+
+model StaffProfile {
+  id       String @id @default(cuid())
+  userId   String @unique
+  unitId   String
+  fullName String
+  position String
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit            Unit             @relation(fields: [unitId], references: [id])
+  scheduleChanges ScheduleChange[]
+
+  @@index([unitId])
+}
+
+model StudentProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  fullName    String
+  institute   String
+  programCode String
+  programName String
+  profile     String
+  levelId     String
+  studyForm   StudyForm
+  funding     Funding
+  course      Int
+  groupId     String
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level          EducationLevel  @relation(fields: [levelId], references: [id])
+  group          Group           @relation(fields: [groupId], references: [id])
+  scheduleEvents ScheduleEvent[]
+  assessments    Assessment[]
+  debts          AcademicDebt[]
+  applications   Application[]
+
+  @@index([levelId])
+  @@index([groupId])
+}
+
+model Group {
+  id      String @id @default(cuid())
+  code    String @unique
+  levelId String
+  course  Int
+
+  level          EducationLevel   @relation(fields: [levelId], references: [id])
+  students       StudentProfile[]
+  scheduleEvents ScheduleEvent[]
+
+  @@index([levelId])
+}
+
+// ---------------------------------------------------------------------------
+// Учёба
+// ---------------------------------------------------------------------------
+
+model Discipline {
+  id   String @id @default(cuid())
+  name String
+
+  scheduleEvents ScheduleEvent[]
+  assessments    Assessment[]
+  debts          AcademicDebt[]
+}
+
+model Teacher {
+  id       String @id @default(cuid())
+  fullName String
+
+  scheduleEvents ScheduleEvent[]
+}
+
+model Room {
+  id   String @id @default(cuid())
+  name String @unique
+
+  scheduleEvents ScheduleEvent[]
+}
+
+/// Занятие группы или пересдача конкретного студента.
+model ScheduleEvent {
+  id           String            @id @default(cuid())
+  groupId      String?
+  studentId    String?
+  disciplineId String
+  teacherId    String
+  roomId       String?
+  platform     String?
+  format       DeliveryFormat    @default(OFFLINE)
+  startsAt     DateTime
+  endsAt       DateTime
+  type         ScheduleEventType
+
+  group      Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student    StudentProfile?  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  discipline Discipline       @relation(fields: [disciplineId], references: [id])
+  teacher    Teacher          @relation(fields: [teacherId], references: [id])
+  room       Room?            @relation(fields: [roomId], references: [id])
+  changes    ScheduleChange[]
+
+  @@index([groupId, startsAt])
+  @@index([studentId, startsAt])
+  @@index([disciplineId])
+  @@index([teacherId])
+  @@index([roomId])
+}
+
+/// «Было → стало» по одному полю события.
+model ScheduleChange {
+  id          String              @id @default(cuid())
+  eventId     String
+  field       ScheduleChangeField
+  oldValue    String
+  newValue    String
+  reason      String
+  changedById String
+  createdAt   DateTime            @default(now())
+
+  event     ScheduleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  changedBy StaffProfile  @relation(fields: [changedById], references: [id])
+
+  @@index([eventId])
+  @@index([changedById])
+}
+
+model Assessment {
+  id           String      @id @default(cuid())
+  studentId    String
+  disciplineId String
+  semester     Int
+  controlForm  ControlForm
+  score        Int?
+  grade        GradeValue?
+  /// 0 — основная аттестация, 1 и 2 — повторные (N-09).
+  attempt      Int         @default(0)
+  date         DateTime
+
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  discipline Discipline     @relation(fields: [disciplineId], references: [id])
+
+  @@index([studentId, semester])
+  @@index([disciplineId])
+}
+
+model AcademicDebt {
+  id           String     @id @default(cuid())
+  studentId    String
+  disciplineId String
+  formedAt     DateTime   @db.Date
+  stage        DebtStage
+  /// Дата образования + 1 год без периодов болезни и академического отпуска (N-10).
+  deadline     DateTime   @db.Date
+  status       DebtStatus @default(OPEN)
+
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  discipline Discipline     @relation(fields: [disciplineId], references: [id])
+
+  @@index([studentId, status])
+  @@index([disciplineId])
+}
+
+// ---------------------------------------------------------------------------
+// Заявки и уведомления
+// ---------------------------------------------------------------------------
+
+model Application {
+  id                String            @id @default(cuid())
+  studentId         String
+  typeId            String
+  status            ApplicationStatus
+  formData          Json
+  /// Подразделение-исполнитель на момент подачи (копия из типа заявки).
+  unitId            String
+  stageDeadline     DateTime?         @db.Date
+  /// В MVP вместо загрузки файла: «Оригинал документа принесу».
+  willBringOriginal Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  student     StudentProfile     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type        ApplicationType    @relation(fields: [typeId], references: [id])
+  unit        Unit               @relation(fields: [unitId], references: [id])
+  events      ApplicationEvent[]
+  attachments Attachment[]
+
+  @@index([studentId, status])
+  @@index([unitId, status])
+  @@index([typeId])
+}
+
+model ApplicationEvent {
+  id            String             @id @default(cuid())
+  applicationId String
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  comment       String?
+  actorUserId   String?
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actor       User?       @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, createdAt])
+  @@index([actorUserId])
+}
+
+/// Файлы к заявкам (после 15.11). Хранятся вне публичной папки.
+model Attachment {
+  id            String   @id @default(cuid())
+  applicationId String
+  fileName      String
+  storagePath   String
+  size          Int
+  mimeType      String
+  createdAt     DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String
+  type        NotificationType
+  title       String
+  body        String
+  link        String?
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead, createdAt])
 }

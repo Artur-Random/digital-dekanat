@@ -156,3 +156,6 @@ playwright-report/
 
 # Next.js: генерируется при dev/build
 next-env.d.ts
+
+# Архив исходников для жюри (npm run submission:archive)
+dist-submission/

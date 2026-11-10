@@ -4,12 +4,12 @@ import { CONCEPT_BANNER_TEXT } from "../src/lib/concept";
 
 import { prepareForScreen } from "./auth";
 import { BASE_URL } from "./base-url";
-import { SCREENS } from "./screens";
+import { SCREENS, resolvePath } from "./screens";
 
 const appOrigin = new URL(BASE_URL).origin;
 
 for (const screen of SCREENS) {
-  test.describe(`${screen.code} ${screen.path}`, () => {
+  test.describe(`${screen.code} ${screen.slug}`, () => {
     test("отвечает 200, плашка на месте, нет скролла на 360 px и внешних запросов", async ({
       page,
     }) => {
@@ -30,7 +30,7 @@ for (const screen of SCREENS) {
       await page.setViewportSize({ width: 360, height: 800 });
       await prepareForScreen(page, screen);
 
-      const response = await page.goto(screen.path, { waitUntil: "networkidle" });
+      const response = await page.goto(await resolvePath(screen), { waitUntil: "networkidle" });
 
       // а) страница отвечает 200
       expect(response?.status()).toBe(200);
