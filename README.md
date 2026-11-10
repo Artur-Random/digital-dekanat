@@ -16,8 +16,10 @@ Next.js 16 (App Router) + TypeScript (strict), PostgreSQL 18 + Prisma 7, Tailwin
 
 ```bash
 npm install                 # зависимости и prisma generate
-cp .env.example .env        # заполнить DATABASE_URL и POSTGRES_* (пароль любой случайный)
+cp .env.example .env        # заполнить DATABASE_URL, POSTGRES_* и DEMO_PASSWORD_* (случайные значения)
 npm run db:up               # PostgreSQL в Docker на 127.0.0.1:5432
+npm run db:migrate          # схема базы
+npm run demo:reset          # демо-данные; логины alina, denis, mfc, dekanat, пароли из .env
 npm run dev                 # http://localhost:3000
 ```
 
@@ -37,6 +39,9 @@ npm run dev                 # http://localhost:3000
 | `npm run format` / `npm run format:check` | Prettier: исправить / проверить                                                   |
 | `npm run test`                            | Unit-тесты (Vitest)                                                               |
 | `npm run test:e2e`                        | E2E-тесты (Playwright; сам поднимает dev-сервер, если `BASE_URL` не задан)        |
+| `npm run db:migrate`                      | Применить миграции Prisma                                                         |
+| `npm run demo:reset`                      | Сбросить и заново засеять демо-данные                                             |
+| `npm run submission:archive`              | Архив исходников для жюри с проверкой на секреты                                  |
 | `npm run screenshots`                     | Скриншоты всех экранов в 360 и 1440 px в `docs/process/screenshots/<дата_время>/` |
 
 ## Структура

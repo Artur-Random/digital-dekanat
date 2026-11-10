@@ -15,6 +15,8 @@
 | lucide-react                    | 1.71.0 | ISC        | Иконки                                             |
 | @fontsource-variable/golos-text | 5.3.0  | OFL-1.1    | Шрифт Golos Text, self-hosted                      |
 | server-only                     | 0.0.1  | MIT        | Ошибка сборки при импорте серверного кода в клиент |
+| argon2                          | 0.45.2 | MIT        | Хэширование паролей argon2id                       |
+| zod                             | 4.6.7  | MIT        | Проверка входных данных на сервере                 |
 
 ## Прямые зависимости разработки (`devDependencies`)
 

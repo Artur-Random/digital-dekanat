@@ -17,7 +17,8 @@ export default defineConfig([
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/server/db.ts", "src/server/dal/**"],
     rules: {
-      "no-restricted-imports": [
+      // Импорт типов разрешён: он не тянет Prisma в рантайм.
+      "@typescript-eslint/no-restricted-imports": [
         "error",
         {
           patterns: [
@@ -32,6 +33,7 @@ export default defineConfig([
                 "**/server/db",
               ],
               message: "Prisma и getDb вызываются только из src/server/dal.",
+              allowTypeImports: true,
             },
           ],
         },

@@ -11,6 +11,7 @@ import {
   MASKED_NOTE,
   PROMPTS_FILE,
   fenceFor,
+  findSecrets,
   formatEntry,
   formatMoscowTimestamp,
   maskSecrets,
@@ -60,6 +61,21 @@ describe("maskSecrets", () => {
   it("скрывает пароль в URL подключения", () => {
     expect(maskSecrets("postgresql://app:VerySecret@localhost:5432/db").text).toBe(
       `postgresql://app:${MASK}@localhost:5432/db`,
+    );
+  });
+
+  it("пустое «KEY=» не захватывает следующую строку", () => {
+    const input = "DEMO_PASSWORD_ALINA=\nDEMO_PASSWORD_DENIS=\n";
+    expect(maskSecrets(input)).toEqual({ text: input, masked: false });
+  });
+
+  it("findSecrets сообщает правило, строку и значение", () => {
+    const found = findSecrets(`строка 1\ntoken=abc123\nghp_${"z".repeat(30)}`);
+    expect(found).toEqual(
+      expect.arrayContaining([
+        { rule: "key-value", line: 2, value: "abc123" },
+        { rule: "github-token", line: 3, value: `ghp_${"z".repeat(30)}` },
+      ]),
     );
   });
 
