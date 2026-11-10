@@ -84,6 +84,8 @@ export const UNITS = [
   { code: "MILITARY", name: "Отдел воинского учёта" },
 ] as const satisfies readonly { code: UnitCode; name: string }[];
 
+// rulesFilled: для каких уровней в прототипе заполнены правила аттестации. 426общ (N-01)
+// распространяется и на специалитет, и на базовое ВО; false у них — сужение MVP, а не норма.
 export const EDUCATION_LEVELS = [
   { code: "BACHELOR", name: "Бакалавриат", rulesFilled: true },
   { code: "SPECIALIST", name: "Специалитет", rulesFilled: false },

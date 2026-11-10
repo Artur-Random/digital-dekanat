@@ -8,9 +8,10 @@ import { type DateKey, dateOnly, moscowDateTime, todayInMoscow } from "@/lib/mos
 import { parseNormsRegistry } from "@/lib/norms-registry";
 import { hashPassword } from "@/server/auth/password";
 import { getDb } from "@/server/db";
+import { nextStageDeadline, stagesSchema } from "@/server/rules/application-stages";
 import { addWorkingDays, subtractWorkingDays } from "@/server/rules/working-days";
 
-import { APPLICATION_TYPES, stagesSchema } from "./application-types";
+import { APPLICATION_TYPES, type ApplicationTypeSeed } from "./application-types";
 import { HOLIDAYS } from "./holidays";
 import { EDUCATION_LEVELS, GROUPS, INSTITUTE, STAFF, STUDENTS, UNITS } from "./people";
 
@@ -256,8 +257,6 @@ type DemoApplication = {
     by: "student" | "staff";
     comment?: string;
   }[];
-  /** Срок текущего этапа в рабочих днях от подачи (null — без срока). */
-  stageDeadlineDays: number | null;
 };
 
 const DEMO_APPLICATIONS: readonly DemoApplication[] = [
@@ -271,7 +270,6 @@ const DEMO_APPLICATIONS: readonly DemoApplication[] = [
       { status: "IN_PROGRESS", afterDays: 1, by: "staff" },
       { status: "READY", afterDays: 2, by: "staff", comment: "Справка готова, забрать в МФЦ." },
     ],
-    stageDeadlineDays: null,
   },
   {
     student: "alina",
@@ -285,7 +283,6 @@ const DEMO_APPLICATIONS: readonly DemoApplication[] = [
     willBringOriginal: true,
     submittedWorkingDaysAgo: 1,
     history: [{ status: "SUBMITTED", afterDays: 0, by: "student" }],
-    stageDeadlineDays: 5,
   },
   {
     student: "denis",
@@ -296,7 +293,6 @@ const DEMO_APPLICATIONS: readonly DemoApplication[] = [
       { status: "SUBMITTED", afterDays: 0, by: "student" },
       { status: "IN_PROGRESS", afterDays: 1, by: "staff" },
     ],
-    stageDeadlineDays: 3,
   },
 ];
 
@@ -326,10 +322,8 @@ async function seedApplications(tx: Tx, ctx: SeedContext): Promise<void> {
         status: last.status,
         formData,
         willBringOriginal: app.willBringOriginal ?? false,
-        stageDeadline:
-          app.stageDeadlineDays === null
-            ? null
-            : dateOnly(addWorkingDays(submitted, app.stageDeadlineDays, ctx.holidays)),
+        // Срок берётся из этапов типа заявки, а не задаётся числом отдельно.
+        stageDeadline: deadlineFor(typeSeed.stages, app, submitted, ctx),
         createdAt: moscowDateTime(submitted, "10:15"),
         events: {
           create: app.history.map((h, index) => ({
@@ -346,6 +340,20 @@ async function seedApplications(tx: Tx, ctx: SeedContext): Promise<void> {
       },
     });
   }
+}
+
+function deadlineFor(
+  stages: ApplicationTypeSeed["stages"],
+  app: DemoApplication,
+  submitted: DateKey,
+  ctx: SeedContext,
+): Date | null {
+  const branch = stagesSchema.parse(stages)[0];
+  const last = app.history.at(-1);
+  if (!branch || !last) return null;
+  const enteredCurrent = addWorkingDays(submitted, last.afterDays, ctx.holidays);
+  const key = nextStageDeadline(branch, last.status, { submitted, enteredCurrent }, ctx.holidays);
+  return key ? dateOnly(key) : null;
 }
 
 function resolveRelativeDates(data: Prisma.InputJsonValue, base: DateKey): Prisma.InputJsonValue {

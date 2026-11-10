@@ -1,48 +1,8 @@
 // Типы заявок и их этапы. Сроки со ссылкой на норму из реестра или с пометкой
 // PROTOTYPE_ASSUMPTION (X-3, X-4 в docs/norms-registry.md): «так устроено в прототипе».
 
-import { z } from "zod";
-
-import type { ApplicationStatus, ApplicationTypeCode, UnitCode } from "@/generated/prisma/client";
-
-const statusSchema = z.enum([
-  "SUBMITTED",
-  "IN_PROGRESS",
-  "READY",
-  "UNDER_REVIEW",
-  "SENT_TO_COMMISSION",
-  "APPROVED",
-  "REJECTED",
-  "ORDER_SIGNED",
-  "CANCELLED",
-] satisfies [ApplicationStatus, ...ApplicationStatus[]]);
-
-const basisSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("NORM"), code: z.string().regex(/^N-\d+$/) }),
-  z.object({ kind: z.literal("PROTOTYPE_ASSUMPTION"), code: z.string().regex(/^X-\d+$/) }),
-]);
-
-export const stageSchema = z.object({
-  status: statusSchema,
-  title: z.string().min(1),
-  /** Срок в рабочих днях для перехода в этот этап, null — без срока. */
-  deadlineDays: z.number().int().positive().nullable(),
-  /** От чего считается срок: от подачи или от входа в предыдущий этап. */
-  countFrom: z.enum(["SUBMITTED", "PREVIOUS"]).nullable(),
-  basis: basisSchema.nullable(),
-  /** На этом этапе возможен отказ (статус REJECTED). */
-  canReject: z.boolean().default(false),
-});
-
-export const branchSchema = z.object({
-  code: z.string().min(1),
-  title: z.string().min(1),
-  stages: z.array(stageSchema).min(1),
-});
-
-export const stagesSchema = z.array(branchSchema);
-
-export type StageBranch = z.infer<typeof branchSchema>;
+import type { ApplicationTypeCode, UnitCode } from "@/generated/prisma/client";
+import type { StageBranch } from "@/server/rules/application-stages";
 
 type FormField = {
   name: string;
@@ -159,7 +119,7 @@ export const APPLICATION_TYPES: readonly ApplicationTypeSeed[] = [
     unit: "MILITARY",
     isInformational: true,
     description:
-      "Оформляется через отдельный сервис отдела воинского учёта. В этом кабинете формы нет.",
+      "Оформляется через отдельный сервис отдела воинского учёта. В этом кабинете формы нет (так устроено в прототипе).",
     stages: [],
     formFields: [],
     requiredDocuments: [],
@@ -232,13 +192,22 @@ export const APPLICATION_TYPES: readonly ApplicationTypeSeed[] = [
             basis: null,
             canReject: false,
           },
+          // N-43: 10 рабочих дней даны на решение; срока на приказ в N-43 нет.
           {
             status: "APPROVED",
-            title: "Решение и приказ",
+            title: "Решение",
             deadlineDays: 10,
             countFrom: "SUBMITTED",
             basis: { kind: "NORM", code: "N-43" },
             canReject: true,
+          },
+          {
+            status: "ORDER_SIGNED",
+            title: "Приказ",
+            deadlineDays: null,
+            countFrom: null,
+            basis: { kind: "NORM", code: "N-43" },
+            canReject: false,
           },
         ],
       },
