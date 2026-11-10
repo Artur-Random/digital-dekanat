@@ -22,3 +22,9 @@ export function getDb(): PrismaClient {
   }
   return globalForPrisma.prisma;
 }
+
+/** Закрыть соединения: для скриптов и тестов, которые должны завершиться. */
+export async function disconnectDb(): Promise<void> {
+  await globalForPrisma.prisma?.$disconnect();
+  globalForPrisma.prisma = undefined;
+}
