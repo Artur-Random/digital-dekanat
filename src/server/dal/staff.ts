@@ -26,7 +26,7 @@ export async function listUnitApplications(actor: StaffActor) {
       status: true,
       createdAt: true,
       stageDeadline: true,
-      type: { select: { title: true } },
+      type: { select: { title: true, stages: true } },
       student: { select: { fullName: true, group: { select: { code: true } } } },
     },
   });
@@ -42,7 +42,7 @@ export async function getUnitApplication(actor: StaffActor, id: string) {
       createdAt: true,
       stageDeadline: true,
       willBringOriginal: true,
-      type: { select: { title: true } },
+      type: { select: { title: true, stages: true } },
       student: { select: { fullName: true, group: { select: { code: true } } } },
       events: {
         orderBy: { createdAt: "asc" },

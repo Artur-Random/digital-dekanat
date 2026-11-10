@@ -37,7 +37,7 @@ export async function listStudentApplications(actor: StudentActor) {
       status: true,
       createdAt: true,
       stageDeadline: true,
-      type: { select: { title: true } },
+      type: { select: { title: true, stages: true } },
       unit: { select: { name: true } },
     },
   });
@@ -53,7 +53,7 @@ export async function getStudentApplication(actor: StudentActor, id: string) {
       createdAt: true,
       stageDeadline: true,
       willBringOriginal: true,
-      type: { select: { title: true, code: true } },
+      type: { select: { title: true, code: true, stages: true } },
       unit: { select: { name: true } },
       events: {
         orderBy: { createdAt: "asc" },
