@@ -91,6 +91,15 @@ async function queueIds(page: Page): Promise<string[]> {
   return hrefs.map((h) => h.split("/").pop() ?? "");
 }
 
+/** ID заявок в списке S4 студента. */
+async function studentListIds(page: Page): Promise<string[]> {
+  await page.goto("/applications");
+  const hrefs = await page
+    .locator('a[href^="/applications/"]')
+    .evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+  return hrefs.map((h) => h.split("/").pop() ?? "");
+}
+
 test("6а. очереди подразделений: академический отпуск у МФЦ (N-45), продление у деканата", async ({
   page,
 }) => {
@@ -110,11 +119,17 @@ test("6а. очереди подразделений: академический
   await expectStatus(page, `/staff/applications/${ids.alinaCert}`, 404);
 });
 
-test("6б. студент не видит чужое заявление на академический отпуск", async ({ page }) => {
+test("6б. заявление на академический отпуск видит только его автор", async ({ page }) => {
   await loginAs(page, "alina");
   await expectStatus(page, `/applications/${ids.denisLeave}`, 404);
-  await page.goto("/applications");
-  await expect(page.getByText("Академический отпуск")).toHaveCount(0);
+  expect(await studentListIds(page)).not.toContain(ids.denisLeave);
+
+  await page.context().clearCookies();
+  await loginAs(page, "denis");
+  expect(await studentListIds(page)).toEqual(
+    expect.arrayContaining([ids.denisLeave, ids.denisSummons]),
+  );
+  await expectStatus(page, `/applications/${ids.denisLeave}`, 200);
 });
 
 test("7. одинаковая ошибка при неверном пароле и несуществующем логине", async ({ page }) => {
