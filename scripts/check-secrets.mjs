@@ -8,10 +8,12 @@ import { resolve } from "node:path";
 
 import { findSecrets } from "../.claude/hooks/log-prompt.mjs";
 
-// Файлы с заведомо поддельными секретами для тестов маскирования.
-const FIXTURE_FILES = new Set([
+// Файлы с заведомо поддельными секретами для тестов маскирования и lock-файл
+// (в нём только хэши integrity пакетов npm).
+const SKIPPED_FILES = new Set([
   ".claude/hooks/log-prompt.test.ts",
   "scripts/make-source-archive.test.ts",
+  "package-lock.json",
 ]);
 
 // Значения-заглушки из документации и примеров, а не настоящие секреты.
@@ -19,6 +21,17 @@ const PLACEHOLDERS =
   /^(?:\.{2,}|…|\[СКРЫТО\]|\*+|<[^>]*>|\$\{[^}]*\}|ПАРОЛЬ|ПОЛЬЗОВАТЕЛЬ|pass|password|secret|token|changeme|null|undefined|true|false)$/i;
 
 const BINARY_EXTENSIONS = /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf|pdf|zip)$/i;
+
+/**
+ * Хук маскирует любые пары «password: …» с запасом. В коде таких пар много
+ * («passwordHash: string»), поэтому для архива пара считается секретом, только если значение
+ * похоже на пароль или ключ: не короче 8 символов, есть буквы и цифры, нет скобок и пробелов.
+ * @param {string} value
+ */
+function looksLikeSecretValue(value) {
+  if (value.length < 8 || /[\s(){}\[\]<>`]/.test(value)) return false;
+  return /[A-Za-zА-Яа-я]/.test(value) && /\d/.test(value);
+}
 
 /** @param {string} path */
 function isEnvFile(path) {
@@ -60,13 +73,15 @@ export function checkRepository(dir) {
     if (space < 0) continue;
     const sha = entry.slice(0, space);
     const path = entry.slice(space + 1);
-    if (seen.has(sha) || FIXTURE_FILES.has(path) || BINARY_EXTENSIONS.test(path)) continue;
+    if (seen.has(sha) || SKIPPED_FILES.has(path) || BINARY_EXTENSIONS.test(path)) continue;
     seen.add(sha);
     if (git(root, ["cat-file", "-t", sha]).trim() !== "blob") continue;
     const content = git(root, ["cat-file", "-p", sha]);
     if (content.includes("\u0000")) continue;
     for (const hit of findSecrets(content)) {
-      if (PLACEHOLDERS.test(hit.value.replace(/^["']|["']$/g, ""))) continue;
+      const value = hit.value.replace(/^["']|["']$/g, "");
+      if (PLACEHOLDERS.test(value)) continue;
+      if (hit.rule === "key-value" && !looksLikeSecretValue(value)) continue;
       problems.push(`${path}:${hit.line}: похоже на секрет (${hit.rule})`);
     }
   }
