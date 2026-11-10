@@ -78,6 +78,8 @@ enum HolidayKind {
   PUBLIC_HOLIDAY
   /// Выходной, перенесённый постановлением Правительства РФ.
   TRANSFERRED_DAY_OFF
+  /// Суббота или воскресенье, ставшие рабочим днём из-за переноса.
+  TRANSFERRED_WORKING_DAY
 }
 
 enum ScheduleEventType {
@@ -213,8 +215,8 @@ model Rule {
 
 /// Нормы из docs/norms-registry.md. Заполняются только парсингом реестра.
 model Norm {
-  id       String @id @default(cuid())
-  code     String @unique
+  id       String  @id @default(cuid())
+  code     String  @unique
   document String
   clause   String
   /// У норм закона (273-ФЗ) страницы нет.
@@ -222,12 +224,15 @@ model Norm {
   quote    String
 }
 
-/// Нерабочие дни производственного календаря (кроме обычных суббот и воскресений).
+/// Исключения производственного календаря: нерабочие будни и рабочие выходные.
+/// Обычные субботы и воскресенья не хранятся, они нерабочие по умолчанию.
 model Holiday {
-  id     String      @id @default(cuid())
-  date   DateTime    @unique @db.Date
-  kind   HolidayKind
-  source String
+  id           String      @id @default(cuid())
+  date         DateTime    @unique @db.Date
+  kind         HolidayKind
+  /// true — день рабочий (перенесённая рабочая суббота), false — нерабочий.
+  isWorkingDay Boolean     @default(false)
+  source       String
 }
 
 // ---------------------------------------------------------------------------
@@ -452,6 +457,8 @@ model Application {
   id                String            @id @default(cuid())
   studentId         String
   typeId            String
+  /// Код ветки этапов из ApplicationType.stages: MAIN, у академического отпуска A или B.
+  branch            String            @default("MAIN")
   status            ApplicationStatus
   formData          Json
   /// Подразделение-исполнитель на момент подачи (копия из типа заявки).
