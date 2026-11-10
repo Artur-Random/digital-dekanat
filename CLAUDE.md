@@ -129,10 +129,16 @@ docs/                      spec, реестр норм, process/, licenses.md
 
 Список скриптов из `package.json` поддерживай актуальным здесь:
 
-- `npm run db:up`: поднять PostgreSQL в Docker.
+- `npm run db:up`: поднять PostgreSQL в Docker (ждёт healthcheck). `npm run db:down`: остановить.
 - `npm run dev`: dev-сервер.
-- `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e`.
-- `npm run screenshots`: автоскриншоты всех экранов.
+- `npm run build`, `npm run start`: сборка (с `prisma generate`) и запуск production.
+- `npm run typecheck`: `prisma generate` и `tsc --noEmit`.
+- `npm run lint`: ESLint без предупреждений.
+- `npm run format`: Prettier, исправляет файлы. `npm run format:check`: только проверка.
+- `npm run test`: unit-тесты Vitest (`src/**/*.test.ts`, `.claude/hooks/*.test.ts`).
+- `npm run test:e2e`: Playwright. Без `BASE_URL` сам поднимает dev-сервер.
+- `npm run screenshots`: автоскриншоты всех экранов из `e2e/screens.ts` в 360 и 1440 px. Без запущенного сервера сам поднимает `next dev`.
+- `postinstall`: `prisma generate` после `npm install`.
 
 ## Готово означает
 
