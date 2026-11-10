@@ -1,0 +1,10 @@
+// Схема данных прототипа. Модели появятся в задании 2 (см. docs/spec-v1.md, раздел 4).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

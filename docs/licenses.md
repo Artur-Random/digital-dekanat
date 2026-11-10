@@ -1,0 +1,53 @@
+# Лицензии
+
+Разрешены только MIT, Apache-2.0, BSD, ISC, OFL (CLAUDE.md, «Интерфейс»). Перед добавлением зависимости проверить лицензию и дописать строку сюда.
+
+## Прямые зависимости (`dependencies`)
+
+| Пакет                           | Версия | Лицензия   | Зачем                                              |
+| ------------------------------- | ------ | ---------- | -------------------------------------------------- |
+| next                            | 16.4.6 | MIT        | Фреймворк (App Router)                             |
+| react                           | 19.3.1 | MIT        | UI                                                 |
+| react-dom                       | 19.3.1 | MIT        | UI                                                 |
+| @prisma/client                  | 7.10.1 | Apache-2.0 | Доступ к базе                                      |
+| @prisma/adapter-pg              | 7.10.1 | Apache-2.0 | Драйвер-адаптер Prisma 7 для PostgreSQL            |
+| pg                              | 8.23.1 | MIT        | Драйвер PostgreSQL (для адаптера)                  |
+| lucide-react                    | 1.71.0 | ISC        | Иконки                                             |
+| @fontsource-variable/golos-text | 5.3.0  | OFL-1.1    | Шрифт Golos Text, self-hosted                      |
+| server-only                     | 0.0.1  | MIT        | Ошибка сборки при импорте серверного кода в клиент |
+
+## Прямые зависимости разработки (`devDependencies`)
+
+| Пакет                       | Версия  | Лицензия     | Зачем                                       |
+| --------------------------- | ------- | ------------ | ------------------------------------------- |
+| typescript                  | 6.0.3   | Apache-2.0   | Типизация                                   |
+| @types/node                 | 22.19.1 | MIT          | Типы Node.js 22                             |
+| @types/react                | 19.3.0  | MIT          | Типы React                                  |
+| @types/react-dom            | 19.3.0  | MIT          | Типы React DOM                              |
+| @types/pg                   | 8.23.1  | MIT          | Типы pg                                     |
+| prisma                      | 7.10.1  | Apache-2.0   | CLI Prisma: generate, migrate               |
+| dotenv                      | 18.0.10 | BSD-2-Clause | Чтение `.env` в `prisma.config.ts`          |
+| tailwindcss                 | 4.3.5   | MIT          | Стили                                       |
+| @tailwindcss/postcss        | 4.3.5   | MIT          | Плагин PostCSS для Tailwind                 |
+| eslint                      | 9.39.5  | MIT          | Линтер                                      |
+| eslint-config-next          | 16.4.6  | MIT          | Правила ESLint для Next.js                  |
+| eslint-config-prettier      | 10.1.8  | MIT          | Отключает правила, конфликтующие с Prettier |
+| prettier                    | 3.9.10  | MIT          | Форматирование                              |
+| prettier-plugin-tailwindcss | 0.8.1   | MIT          | Сортировка классов Tailwind                 |
+| vitest                      | 5.1.0   | MIT          | Unit-тесты                                  |
+| @playwright/test            | 1.63.0  | Apache-2.0   | E2E-тесты и скриншоты                       |
+| tsx                         | 4.23.15 | MIT          | Запуск `scripts/*.ts`                       |
+
+## Шрифт
+
+| Шрифт                 | Пакет                                 | Лицензия                  | Источник                                                                         |
+| --------------------- | ------------------------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| Golos Text (variable) | @fontsource-variable/golos-text 5.3.0 | SIL Open Font License 1.1 | Copyright 2019 The Golos Text Project Authors, github.com/googlefonts/golos-text |
+
+Файлы шрифта отдаются с нашего домена из сборки Next.js, обращений к Google Fonts и CDN нет.
+
+## Инфраструктура (не npm)
+
+| Компонент                                 | Версия | Лицензия                          |
+| ----------------------------------------- | ------ | --------------------------------- |
+| PostgreSQL (образ `postgres:18.6-alpine`) | 18.6   | PostgreSQL License (BSD-подобная) |
