@@ -7,7 +7,7 @@ import type { ApplicationStatus } from "@/generated/prisma/enums";
 import type { DateKey } from "@/lib/moscow-date";
 import { APPLICATION_STATUS_LABEL } from "@/lib/labels";
 
-import { type NonWorkingDays, addWorkingDays } from "./working-days";
+import { type ProductionCalendar, addWorkingDays } from "./working-days";
 
 const statusSchema = z.enum([
   "SUBMITTED",
@@ -60,8 +60,16 @@ export function parseStages(json: unknown): StageBranch[] {
  * Нужно потому, что один статус значит разное: ORDER_SIGNED у продления аттестации —
  * распоряжение (N-05), у академического отпуска — приказ (N-48).
  */
-export function statusTitle(branches: StageBranch[], status: ApplicationStatus): string {
-  for (const branch of branches) {
+export function statusTitle(
+  branches: StageBranch[],
+  status: ApplicationStatus,
+  branchCode?: string,
+): string {
+  // Сначала ветка самой заявки: в разных ветках один статус может называться по-разному.
+  const ordered = [...branches].sort(
+    (a, b) => Number(b.code === branchCode) - Number(a.code === branchCode),
+  );
+  for (const branch of ordered) {
     const stage = branch.stages.find((s) => s.status === status);
     if (stage) return stage.title;
   }
@@ -77,12 +85,12 @@ export function nextStageDeadline(
   branch: StageBranch,
   current: ApplicationStatus,
   dates: { submitted: DateKey; enteredCurrent: DateKey },
-  holidays: NonWorkingDays,
+  calendar: ProductionCalendar,
 ): DateKey | null {
   const index = branch.stages.findIndex((s) => s.status === current);
   if (index < 0) return null;
   const next = branch.stages[index + 1];
   if (!next || next.deadlineDays === null || next.countFrom === null) return null;
   const from = next.countFrom === "SUBMITTED" ? dates.submitted : dates.enteredCurrent;
-  return addWorkingDays(from, next.deadlineDays, holidays);
+  return addWorkingDays(from, next.deadlineDays, calendar);
 }
