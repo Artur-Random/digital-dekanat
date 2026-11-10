@@ -45,7 +45,7 @@ test("1. аноним уходит на /login с next", async ({ page }) => {
 test("2. alina открывает свою заявку, но не заявку Дениса", async ({ page }) => {
   await loginAs(page, "alina");
   await expectStatus(page, `/applications/${ids.alinaCert}`, 200);
-  await expect(page.getByTestId("application-status")).toHaveText("Готова к выдаче");
+  await expect(page.getByTestId("application-status")).toHaveText("Готова к выдаче в МФЦ");
   await expectStatus(page, `/applications/${ids.denisSummons}`, 404);
 });
 
@@ -126,14 +126,27 @@ test("9. после выхода старая cookie не даёт доступ�
 });
 
 test("10. ?next= с внешним адресом оставляет на сайте", async ({ page }) => {
-  for (const next of ["https://evil.example", "//evil.example", "/\\evil.example"]) {
+  const attacks = [
+    "https://evil.example",
+    "//evil.example",
+    "/\\evil.example",
+    // Нормализация «.» и «..» даёт «//evil.example» (находка security-reviewer).
+    "/.//evil.example",
+    "/x/..//evil.example",
+  ];
+  const origin = new URL(BASE_URL).origin;
+  for (const next of attacks) {
     await page.context().clearCookies();
     await page.goto(`/login?next=${encodeURIComponent(next)}`);
     await submitLogin(page, "alina", passwordFor("alina"));
     await expect(page).not.toHaveURL(/\/login/);
-    const url = new URL(page.url());
-    expect(url.origin, next).toBe(new URL(BASE_URL).origin);
-    expect(url.pathname, next).toBe("/");
+    expect(new URL(page.url()).origin, next).toBe(origin);
+    expect(new URL(page.url()).pathname, next).toBe("/");
+
+    // Уже вошедший пользователь открывает ту же ссылку: тоже остаётся на сайте.
+    await page.goto(`/login?next=${encodeURIComponent(next)}`);
+    expect(new URL(page.url()).origin, `вошедший: ${next}`).toBe(origin);
+    expect(new URL(page.url()).pathname, `вошедший: ${next}`).toBe("/");
   }
 });
 

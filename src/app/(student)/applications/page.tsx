@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { formatDay } from "@/lib/format-date";
-import { APPLICATION_STATUS_LABEL } from "@/lib/labels";
+import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { requireStudent } from "@/server/auth/guards";
 import { listStudentApplications } from "@/server/dal/students";
 
@@ -18,7 +18,9 @@ export default async function ApplicationsPage() {
     <>
       <h1 className="text-2xl font-semibold">Заявки и справки</h1>
       {applications.length === 0 ? (
-        <p className="text-ink-muted mt-4">Заявок пока нет.</p>
+        <p className="text-ink-muted mt-4">
+          Заявок пока нет. Здесь появятся справки и заявления, которые вы подадите.
+        </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-2">
           {applications.map((app) => (
@@ -30,7 +32,8 @@ export default async function ApplicationsPage() {
                 <span>
                   <span className="block font-medium">{app.type.title}</span>
                   <span className="text-ink-muted block text-sm">
-                    {APPLICATION_STATUS_LABEL[app.status]} · подано {formatDay(app.createdAt)}
+                    {statusTitle(parseStages(app.type.stages), app.status)} · от{" "}
+                    {formatDay(app.createdAt)}
                   </span>
                 </span>
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0" />

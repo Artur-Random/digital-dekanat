@@ -17,9 +17,11 @@ export type Screen = {
   account?: TestAccount;
 };
 
+// EP — профиль сотрудника: в спецификации кода нет, экран добавлен заданием 2.
 export const SCREENS: readonly Screen[] = [
   { code: "S0", slug: "login", path: "/login", role: "anonymous" },
   { code: "S1", slug: "home", path: "/", role: "student", account: "alina" },
+  { code: "S4", slug: "applications", path: "/applications", role: "student", account: "alina" },
   { code: "S7", slug: "profile", path: "/profile", role: "student", account: "alina" },
   {
     code: "S4b",
@@ -28,6 +30,7 @@ export const SCREENS: readonly Screen[] = [
     role: "student",
     account: "alina",
   },
+  { code: "EP", slug: "staff-profile", path: "/staff/profile", role: "staff", account: "mfc" },
   { code: "E1", slug: "staff-queue", path: "/staff", role: "staff", account: "dekanat" },
   {
     code: "E2",
