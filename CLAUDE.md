@@ -153,6 +153,9 @@ docs/                      spec, реестр норм, process/, licenses.md
 - `npm run test`: unit-тесты Vitest (`src/**/*.test.ts`, `.claude/hooks/*.test.ts`).
 - `npm run test:e2e`: Playwright. Без `BASE_URL` сам поднимает dev-сервер.
 - `npm run screenshots`: автоскриншоты всех экранов из `e2e/screens.ts` в 360 и 1440 px. Без запущенного сервера сам поднимает `next dev`.
+- `npm run db:migrate`: применить миграции (`prisma migrate deploy`). Новая миграция в разработке: `npx prisma migrate dev --name <имя>`.
+- `npm run demo:reset`: удалить все данные и засеять демо заново (даты от «сегодня» по Москве). Нужны `DEMO_PASSWORD_*` в `.env`. Это же `prisma db seed`.
+- `npm run submission:archive`: zip исходников с историей git для жюри в `dist-submission/` с проверкой на секреты.
 - `postinstall`: `prisma generate` после `npm install`.
 
 ## Готово означает
