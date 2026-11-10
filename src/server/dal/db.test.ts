@@ -2,7 +2,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { lockoutMinutesLeft } from "@/server/auth/login";
+import { authenticate, lockoutMinutesLeft } from "@/server/auth/login";
 import { createSession, hashToken } from "@/server/auth/session";
 import { getDb, disconnectDb } from "@/server/db";
 
@@ -81,6 +81,28 @@ describe("пароли и сессии в базе", () => {
 });
 
 describe("блокировка входа", () => {
+  it("параллельные попытки не обходят лимит: пароль проверяют не больше 5 из 10", async () => {
+    const login = "race-test-login";
+    await getDb().loginAttempt.deleteMany({ where: { login } });
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, i) => authenticate(login, `wrong-${i}`)),
+    );
+    expect(results.every((r) => !r.ok)).toBe(true);
+    // Попытки, отклонённые блокировкой, удаляются; остаются только проверенные паролем.
+    const verified = await getDb().loginAttempt.count({ where: { login, success: false } });
+    expect(verified).toBeLessThanOrEqual(5);
+    await getDb().loginAttempt.deleteMany({ where: { login } });
+  });
+
+  it("верный пароль после 5 неудач не пускает", async () => {
+    await getDb().loginAttempt.deleteMany({ where: { login: "denis" } });
+    for (let i = 0; i < 5; i++) await authenticate("denis", `wrong-${i}`);
+    const result = await authenticate("denis", process.env.DEMO_PASSWORD_DENIS ?? "");
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.retryAfterMinutes).toBeGreaterThan(0);
+    await getDb().loginAttempt.deleteMany({ where: { login: "denis" } });
+  });
+
   const now = new Date("2026-11-10T12:00:00Z");
   const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000);
 

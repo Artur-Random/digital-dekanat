@@ -16,7 +16,15 @@ main()
   .catch((error: unknown) => {
     console.error(
       "Сброс не выполнен:",
-      error instanceof Error ? error.message : "неизвестная ошибка",
+      // Свои ошибки (нет паролей, формат реестра) печатаем целиком; ошибки драйвера базы
+      // только именем: в их тексте бывают хост, пользователь и SQL.
+      error instanceof Error
+        ? error.constructor === Error ||
+          error.name === "NormsRegistryError" ||
+          error.name === "ZodError"
+          ? error.message
+          : error.name
+        : "неизвестная ошибка",
     );
     process.exitCode = 1;
   })

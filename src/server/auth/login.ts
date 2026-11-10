@@ -1,6 +1,12 @@
 import "server-only";
 
-import { findUserForLogin, listRecentFailedAttempts, recordLoginAttempt } from "@/server/dal/auth";
+import {
+  deleteLoginAttempt,
+  findUserForLogin,
+  listRecentFailedAttempts,
+  markLoginAttemptSucceeded,
+  startLoginAttempt,
+} from "@/server/dal/auth";
 
 import { verifyPassword } from "./password";
 
@@ -25,30 +31,37 @@ export function lockoutMinutesLeft(failures: Date[], now: Date): number | null {
   return left > 0 ? Math.ceil(left / 60_000) : null;
 }
 
+/**
+ * Вход с ограничением попыток. Попытка сначала записывается как неудачная, потом считаются
+ * неудачи в окне, и только потом проверяется пароль. Так параллельные запросы видят записи
+ * друг друга: из N одновременных попыток пароль проверят не больше MAX_FAILED_ATTEMPTS.
+ */
 export async function authenticate(
   login: string,
   password: string,
   now = new Date(),
 ): Promise<LoginResult> {
   const normalized = login.trim().toLowerCase();
+  const attemptId = await startLoginAttempt(normalized);
   const failures = await listRecentFailedAttempts(
     normalized,
     new Date(now.getTime() - ATTEMPT_WINDOW_MS),
   );
-  const lockedFor = lockoutMinutesLeft(failures, now);
+  const previous = failures.filter((f) => f.id !== attemptId).map((f) => f.createdAt);
+  const lockedFor = lockoutMinutesLeft(previous, now);
   const user = await findUserForLogin(normalized);
   // Хэш считаем всегда, даже при блокировке и несуществующем логине: время ответа одинаковое.
   const valid = await verifyPassword(user?.passwordHash ?? null, password);
 
   if (lockedFor !== null) {
-    // Попытки во время блокировки не записываем, иначе блокировку можно продлевать бесконечно.
+    // Попытку во время блокировки удаляем, иначе блокировку можно продлевать бесконечно.
+    await deleteLoginAttempt(attemptId);
     return { ok: false, retryAfterMinutes: lockedFor };
   }
   if (!user || !valid) {
-    await recordLoginAttempt(normalized, false);
-    const after = lockoutMinutesLeft([...failures, now], now);
+    const after = lockoutMinutesLeft([...previous, now], now);
     return { ok: false, retryAfterMinutes: after };
   }
-  await recordLoginAttempt(normalized, true);
+  await markLoginAttemptSucceeded(attemptId);
   return { ok: true, userId: user.id, role: user.role };
 }
