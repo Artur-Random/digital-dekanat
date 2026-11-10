@@ -69,14 +69,15 @@ async function main(): Promise<void> {
   const browser = await chromium.launch();
   try {
     for (const viewport of VIEWPORTS) {
-      const context = await browser.newContext({
-        viewport,
-        deviceScaleFactor: 1,
-        locale: "ru-RU",
-        timezoneId: "Europe/Moscow",
-        baseURL: BASE_URL,
-      });
       for (const screen of SCREENS) {
+        // Свой контекст на каждый экран: у каждого экрана свой аккаунт и свои cookie.
+        const context = await browser.newContext({
+          viewport,
+          deviceScaleFactor: 1,
+          locale: "ru-RU",
+          timezoneId: "Europe/Moscow",
+          baseURL: BASE_URL,
+        });
         const page = await context.newPage();
         await prepareForScreen(page, screen);
         const path = await resolvePath(screen);
@@ -87,9 +88,8 @@ async function main(): Promise<void> {
         const file = join(outDir, `${screen.code}-${screen.slug}-${viewport.width}.png`);
         await page.screenshot({ path: file, fullPage: true });
         console.log(file);
-        await page.close();
+        await context.close();
       }
-      await context.close();
     }
   } finally {
     await browser.close();
