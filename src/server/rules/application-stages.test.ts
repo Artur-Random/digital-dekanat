@@ -4,8 +4,9 @@ import { APPLICATION_TYPES } from "@/server/dal/demo/application-types";
 import { HOLIDAYS } from "@/server/dal/demo/holidays";
 
 import { nextStageDeadline, parseStages, statusTitle } from "./application-stages";
+import { buildCalendar } from "./working-days";
 
-const holidays = new Set(HOLIDAYS.map((h) => h.date));
+const calendar = buildCalendar(HOLIDAYS);
 
 function branches(code: string) {
   const type = APPLICATION_TYPES.find((t) => t.code === code);
@@ -30,6 +31,11 @@ describe("этапы заявок", () => {
     expect(statusTitle(branches("ACADEMIC_LEAVE"), "ORDER_SIGNED")).toBe("Приказ");
   });
 
+  it("подпись учитывает ветку заявки", () => {
+    expect(statusTitle(branches("ACADEMIC_LEAVE"), "APPROVED", "A")).toBe("Решение");
+    expect(statusTitle(branches("ACADEMIC_LEAVE"), "APPROVED", "B")).toBe("Решение комиссии");
+  });
+
   it("статус, которого нет в этапах, берёт общую подпись", () => {
     expect(statusTitle(branches("CERT_ENROLLMENT"), "CANCELLED")).toBe("Отменено");
   });
@@ -38,23 +44,23 @@ describe("этапы заявок", () => {
     const [main] = branches("CERT_ENROLLMENT");
     if (!main) throw new Error("нет ветки");
     const dates = { submitted: "2026-11-02", enteredCurrent: "2026-11-03" };
-    expect(nextStageDeadline(main, "IN_PROGRESS", dates, holidays)).toBe("2026-11-06");
-    expect(nextStageDeadline(main, "READY", dates, holidays)).toBeNull();
+    expect(nextStageDeadline(main, "IN_PROGRESS", dates, calendar)).toBe("2026-11-06");
+    expect(nextStageDeadline(main, "READY", dates, calendar)).toBeNull();
   });
 
   it("академический отпуск, ветка Б: решение комиссии 5 дней от передачи (N-46)", () => {
     const b = branches("ACADEMIC_LEAVE").find((x) => x.code === "B");
     if (!b) throw new Error("нет ветки Б");
     const dates = { submitted: "2026-11-09", enteredCurrent: "2026-11-10" };
-    expect(nextStageDeadline(b, "SUBMITTED", dates, holidays)).toBe("2026-11-11");
-    expect(nextStageDeadline(b, "SENT_TO_COMMISSION", dates, holidays)).toBe("2026-11-17");
+    expect(nextStageDeadline(b, "SUBMITTED", dates, calendar)).toBe("2026-11-11");
+    expect(nextStageDeadline(b, "SENT_TO_COMMISSION", dates, calendar)).toBe("2026-11-17");
   });
 
   it("академический отпуск, ветка А: на приказ срока нет (N-43)", () => {
     const a = branches("ACADEMIC_LEAVE").find((x) => x.code === "A");
     if (!a) throw new Error("нет ветки А");
     const dates = { submitted: "2026-11-09", enteredCurrent: "2026-11-09" };
-    expect(nextStageDeadline(a, "SUBMITTED", dates, holidays)).toBe("2026-11-23");
-    expect(nextStageDeadline(a, "APPROVED", dates, holidays)).toBeNull();
+    expect(nextStageDeadline(a, "SUBMITTED", dates, calendar)).toBe("2026-11-23");
+    expect(nextStageDeadline(a, "APPROVED", dates, calendar)).toBeNull();
   });
 });
