@@ -30,13 +30,16 @@ export default async function ProfilePage() {
       <h1 className="text-2xl font-semibold" data-testid="profile-name">
         {profile.fullName}
       </h1>
-      <dl className="mt-4 flex flex-col gap-3 sm:grid sm:grid-cols-[12rem_1fr] sm:gap-x-4">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-ink-muted text-sm sm:text-base">{label}</dt>
-            <dd className="-mt-2 sm:mt-0">{value}</dd>
-          </div>
-        ))}
+      <dl className="mt-4 grid grid-cols-1 sm:grid-cols-[12rem_1fr] sm:gap-x-4 sm:gap-y-3">
+        {rows.flatMap(([label, value]) => [
+          <dt
+            key={`${label}-t`}
+            className="text-ink-muted mt-3 text-sm first:mt-0 sm:mt-0 sm:text-base"
+          >
+            {label}
+          </dt>,
+          <dd key={`${label}-d`}>{value}</dd>,
+        ])}
       </dl>
 
       <section

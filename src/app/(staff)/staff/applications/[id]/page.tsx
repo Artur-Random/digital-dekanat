@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApplicationHistory } from "@/components/ApplicationHistory";
-import { formatDateOnly, formatDay } from "@/lib/format-date";
-import { APPLICATION_STATUS_LABEL } from "@/lib/labels";
+import { formatDay } from "@/lib/format-date";
+import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { requireStaff } from "@/server/auth/guards";
 import { getUnitApplication } from "@/server/dal/staff";
 
@@ -18,11 +18,12 @@ export default async function StaffApplicationPage({ params }: Props) {
   const { id } = await params;
   const app = await getUnitApplication(actor, id);
   if (!app) notFound();
+  const stages = parseStages(app.type.stages);
 
   return (
     <>
-      <p className="text-sm">
-        <Link href="/staff" className="text-accent underline">
+      <p>
+        <Link href="/staff" className="text-accent inline-flex min-h-11 items-center underline">
           Очередь
         </Link>
       </p>
@@ -34,16 +35,10 @@ export default async function StaffApplicationPage({ params }: Props) {
         </dd>
         <dt className="text-ink-muted">Статус</dt>
         <dd className="font-medium" data-testid="application-status">
-          {APPLICATION_STATUS_LABEL[app.status]}
+          {statusTitle(stages, app.status)}
         </dd>
         <dt className="text-ink-muted">Поступило</dt>
         <dd>{formatDay(app.createdAt)}</dd>
-        {app.stageDeadline ? (
-          <>
-            <dt className="text-ink-muted">Срок этапа</dt>
-            <dd>до {formatDateOnly(app.stageDeadline)}</dd>
-          </>
-        ) : null}
         {app.willBringOriginal ? (
           <>
             <dt className="text-ink-muted">Документ</dt>
@@ -53,7 +48,7 @@ export default async function StaffApplicationPage({ params }: Props) {
       </dl>
       <h2 className="mt-8 text-lg font-semibold">История</h2>
       <div className="mt-3">
-        <ApplicationHistory events={app.events} />
+        <ApplicationHistory events={app.events} stages={stages} />
       </div>
     </>
   );

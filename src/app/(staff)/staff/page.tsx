@@ -2,8 +2,8 @@ import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { formatDateOnly, formatDay } from "@/lib/format-date";
-import { APPLICATION_STATUS_LABEL } from "@/lib/labels";
+import { formatDay } from "@/lib/format-date";
+import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { requireStaff } from "@/server/auth/guards";
 import { listUnitApplications } from "@/server/dal/staff";
 
@@ -18,7 +18,7 @@ export default async function StaffQueuePage() {
     <>
       <h1 className="text-2xl font-semibold">Очередь заявок</h1>
       {applications.length === 0 ? (
-        <p className="text-ink-muted mt-4">Новых заявок нет.</p>
+        <p className="text-ink-muted mt-4">В очереди подразделения заявок нет.</p>
       ) : (
         <ul className="mt-4 flex flex-col gap-2">
           {applications.map((app) => (
@@ -33,8 +33,8 @@ export default async function StaffQueuePage() {
                     {app.student.fullName}, {app.student.group.code}
                   </span>
                   <span className="text-ink-muted block text-sm">
-                    {APPLICATION_STATUS_LABEL[app.status]} · поступило {formatDay(app.createdAt)}
-                    {app.stageDeadline ? ` · срок до ${formatDateOnly(app.stageDeadline)}` : ""}
+                    Статус: {statusTitle(parseStages(app.type.stages), app.status).toLowerCase()} ·
+                    поступило {formatDay(app.createdAt)}
                   </span>
                 </span>
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
