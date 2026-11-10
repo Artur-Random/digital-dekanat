@@ -17,40 +17,50 @@ const FILE_HEADER =
   "Файл ведёт хук `.claude/hooks/log-prompt.mjs` (событие UserPromptSubmit). Вручную не редактируется.\n";
 
 /**
- * Правила маскирования. Порядок важен: сначала многострочные ключи и URL с паролем,
+ * Правила поиска секретов. Порядок важен: сначала многострочные ключи и URL с паролем,
  * потом токены известного формата, в конце пары «ключ=значение».
- * @type {Array<{ pattern: RegExp, replace: (match: string, ...groups: string[]) => string }>}
+ * Если в шаблоне две группы, первая (префикс) сохраняется, вторая (сам секрет) скрывается;
+ * иначе скрывается всё совпадение. Эти же правила использует scripts/check-secrets.mjs.
+ * @type {ReadonlyArray<{ name: string, pattern: RegExp }>}
  */
-const RULES = [
+export const SECRET_RULES = [
   // Приватные ключи PEM, в том числе обрезанные без строки END.
   {
+    name: "private-key",
     pattern:
       /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)/g,
-    replace: () => MASK,
   },
-  // Логин и пароль внутри URL: postgresql://user:pass@host
-  {
-    pattern: /([a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)([^\s@/]+)@/gi,
-    replace: (_m, prefix) => `${prefix}${MASK}@`,
-  },
+  // Логин и пароль внутри URL: схема://логин:пароль@хост
+  { name: "url-credentials", pattern: /([a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)([^\s@/]+)(?=@)/gi },
   // Токены GitHub: ghp_, gho_, ghu_, ghs_, ghr_ и fine-grained github_pat_.
-  { pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}/g, replace: () => MASK },
-  { pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}/g, replace: () => MASK },
+  { name: "github-pat", pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}/g },
+  { name: "github-token", pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}/g },
   // Yandex Cloud: API-ключи (AQVN...), IAM-токены (t1....), секреты статических ключей (YC...).
-  { pattern: /\bAQVN[A-Za-z0-9_-]{20,}/g, replace: () => MASK },
-  { pattern: /\bt1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{20,}/g, replace: () => MASK },
-  { pattern: /\bYC[A-Za-z0-9_-]{30,}/g, replace: () => MASK },
+  { name: "yandex-api-key", pattern: /\bAQVN[A-Za-z0-9_-]{20,}/g },
+  { name: "yandex-iam-token", pattern: /\bt1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{20,}/g },
+  { name: "yandex-static-key", pattern: /\bYC[A-Za-z0-9_-]{30,}/g },
   // Другие частые форматы: ключи вида sk-..., AWS access key, заголовок Bearer.
-  { pattern: /\bsk-[A-Za-z0-9_-]{20,}/g, replace: () => MASK },
-  { pattern: /\bAKIA[0-9A-Z]{16}\b/g, replace: () => MASK },
-  { pattern: /(\bBearer\s+)[A-Za-z0-9._~+/=-]{8,}/g, replace: (_m, prefix) => `${prefix}${MASK}` },
+  { name: "sk-key", pattern: /\bsk-[A-Za-z0-9_-]{20,}/g },
+  { name: "aws-access-key", pattern: /\bAKIA[0-9A-Z]{16}\b/g },
+  { name: "bearer", pattern: /(\bBearer[ \t]+)([A-Za-z0-9._~+/=-]{8,})/g },
   // Пары password=..., secret=..., token=..., api_key: ..., пароль: ... (в том числе JSON и .env).
+  // Пробелы только внутри строки: пустое «KEY=» не должно захватывать следующую строку.
   {
+    name: "key-value",
     pattern:
-      /([A-Za-z0-9_-]*(?:password|passwd|pwd|secret|token|api[_-]?key|пароль|токен|секрет)[A-Za-z0-9_-]*["']?\s*[=:]\s*)("[^"\n]*"|'[^'\n]*'|[^\s"',;]+)/gi,
-    replace: (_m, prefix) => `${prefix}${MASK}`,
+      /([A-Za-z0-9_-]*(?:password|passwd|pwd|secret|token|api[_-]?key|пароль|токен|секрет)[A-Za-z0-9_-]*["']?[ \t]*[=:][ \t]*)("[^"\n]*"|'[^'\n]*'|[^\s"',;]+)/gi,
   },
 ];
+
+/**
+ * @param {string} match
+ * @param {unknown[]} groups
+ */
+function maskMatch(match, groups) {
+  const [prefix, secret] = groups;
+  if (typeof prefix === "string" && typeof secret === "string") return `${prefix}${MASK}`;
+  return MASK;
+}
 
 /**
  * Заменяет очевидные секреты на [СКРЫТО].
@@ -59,10 +69,28 @@ const RULES = [
  */
 export function maskSecrets(text) {
   let result = text;
-  for (const rule of RULES) {
-    result = result.replace(rule.pattern, rule.replace);
+  for (const rule of SECRET_RULES) {
+    result = result.replace(rule.pattern, (match, ...groups) => maskMatch(match, groups));
   }
   return { text: result, masked: result !== text };
+}
+
+/**
+ * Все совпадения с правилами: имя правила, строка (с 1) и найденное значение секрета.
+ * @param {string} text
+ * @returns {Array<{ rule: string, line: number, value: string }>}
+ */
+export function findSecrets(text) {
+  /** @type {Array<{ rule: string, line: number, value: string }>} */
+  const found = [];
+  for (const rule of SECRET_RULES) {
+    for (const m of text.matchAll(rule.pattern)) {
+      const value = typeof m[2] === "string" ? m[2] : m[0];
+      const line = text.slice(0, m.index ?? 0).split("\n").length;
+      found.push({ rule: rule.name, line, value });
+    }
+  }
+  return found;
 }
 
 /**
