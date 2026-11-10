@@ -3,7 +3,8 @@
 
 import "dotenv/config";
 
-import { resetDemoData } from "@/server/dal/demo/reset";
+import { NormsRegistryError } from "@/lib/norms-registry";
+import { DemoResetError, resetDemoData } from "@/server/dal/demo/reset";
 import { disconnectDb } from "@/server/db";
 
 async function main(): Promise<void> {
@@ -14,18 +15,11 @@ async function main(): Promise<void> {
 
 main()
   .catch((error: unknown) => {
-    console.error(
-      "Сброс не выполнен:",
-      // Свои ошибки (нет паролей, формат реестра) печатаем целиком; ошибки драйвера базы
-      // только именем: в их тексте бывают хост, пользователь и SQL.
-      error instanceof Error
-        ? error.constructor === Error ||
-          error.name === "NormsRegistryError" ||
-          error.name === "ZodError"
-          ? error.message
-          : error.name
-        : "неизвестная ошибка",
-    );
+    // Свои ошибки (нет паролей, формат реестра) печатаем целиком; ошибки драйвера и Node
+    // только именем: в их тексте бывают хост, порт, пользователь и SQL.
+    const safe = error instanceof DemoResetError || error instanceof NormsRegistryError;
+    const text = safe ? error.message : error instanceof Error ? error.name : "неизвестная ошибка";
+    console.error("Сброс не выполнен:", text);
     process.exitCode = 1;
   })
   .finally(() => disconnectDb());

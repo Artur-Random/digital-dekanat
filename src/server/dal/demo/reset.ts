@@ -41,6 +41,14 @@ export type SeedContext = {
   };
 };
 
+/** Ошибка сброса, текст которой безопасно печатать целиком. */
+export class DemoResetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DemoResetError";
+  }
+}
+
 function requirePasswords(env: Record<string, string | undefined>): Map<string, string> {
   const result = new Map<string, string>();
   const missing: string[] = [];
@@ -51,7 +59,9 @@ function requirePasswords(env: Record<string, string | undefined>): Map<string, 
   }
   if (missing.length > 0) {
     // Имена переменных, не значения.
-    throw new Error(`Не заданы пароли демо-аккаунтов: ${missing.join(", ")}. Задайте их в .env.`);
+    throw new DemoResetError(
+      `Не заданы пароли демо-аккаунтов: ${missing.join(", ")}. Задайте их в .env.`,
+    );
   }
   return result;
 }
