@@ -33,8 +33,13 @@ export default async function StaffQueuePage() {
                     {app.student.fullName}, {app.student.group.code}
                   </span>
                   <span className="text-ink-muted block text-sm">
-                    Статус: {statusTitle(parseStages(app.type.stages), app.status).toLowerCase()} ·
-                    поступило {formatDay(app.createdAt)}
+                    Статус:{" "}
+                    {statusTitle(
+                      parseStages(app.type.stages),
+                      app.status,
+                      app.branch,
+                    ).toLowerCase()}{" "}
+                    · поступило {formatDay(app.createdAt)}
                   </span>
                 </span>
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0" />

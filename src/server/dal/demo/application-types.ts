@@ -176,7 +176,8 @@ export const APPLICATION_TYPES: readonly ApplicationTypeSeed[] = [
   {
     code: "ACADEMIC_LEAVE",
     title: "Академический отпуск",
-    unit: "DEKANAT",
+    // N-45: заявление в комиссию направляет учебный отдел МФЦ (решение Кирилла от 10.11).
+    unit: "MFC",
     isInformational: false,
     description: null,
     stages: [

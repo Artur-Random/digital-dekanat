@@ -9,7 +9,12 @@ import { parseNormsRegistry } from "@/lib/norms-registry";
 import { hashPassword } from "@/server/auth/password";
 import { getDb } from "@/server/db";
 import { nextStageDeadline, stagesSchema } from "@/server/rules/application-stages";
-import { addWorkingDays, subtractWorkingDays } from "@/server/rules/working-days";
+import {
+  type ProductionCalendar,
+  addWorkingDays,
+  buildCalendar,
+  subtractWorkingDays,
+} from "@/server/rules/working-days";
 
 import { APPLICATION_TYPES, type ApplicationTypeSeed } from "./application-types";
 import { HOLIDAYS } from "./holidays";
@@ -29,7 +34,7 @@ export type ResetSummary = Record<string, number>;
 
 export type SeedContext = {
   today: DateKey;
-  holidays: Set<DateKey>;
+  calendar: ProductionCalendar;
   ids: {
     levels: Map<string, string>;
     units: Map<string, string>;
@@ -109,7 +114,12 @@ async function seedReferenceData(tx: Tx, ctx: SeedContext): Promise<void> {
     ctx.ids.units.set(unit.code, row.id);
   }
   await tx.holiday.createMany({
-    data: HOLIDAYS.map((h) => ({ date: dateOnly(h.date), kind: h.kind, source: h.source })),
+    data: HOLIDAYS.map((h) => ({
+      date: dateOnly(h.date),
+      kind: h.kind,
+      isWorkingDay: h.isWorkingDay,
+      source: h.source,
+    })),
   });
 }
 
@@ -256,6 +266,8 @@ function requireHash(hashes: Map<string, string>, login: string): string {
 type DemoApplication = {
   student: "alina" | "denis";
   type: ApplicationTypeCode;
+  /** Ветка этапов из типа заявки; по умолчанию MAIN. */
+  branch?: string;
   formData: Prisma.InputJsonValue;
   willBringOriginal?: boolean;
   /** Подано столько рабочих дней назад. */
@@ -304,6 +316,14 @@ const DEMO_APPLICATIONS: readonly DemoApplication[] = [
       { status: "IN_PROGRESS", afterDays: 1, by: "staff" },
     ],
   },
+  {
+    student: "denis",
+    type: "ACADEMIC_LEAVE",
+    branch: "B",
+    formData: { basis: "FAMILY", months: 6 },
+    submittedWorkingDaysAgo: 1,
+    history: [{ status: "SUBMITTED", afterDays: 0, by: "student" }],
+  },
 ];
 
 async function seedApplications(tx: Tx, ctx: SeedContext): Promise<void> {
@@ -317,7 +337,7 @@ async function seedApplications(tx: Tx, ctx: SeedContext): Promise<void> {
     if (!typeSeed || !typeId || !studentId || !studentUserId || !unitId) {
       throw new Error(`Не хватает данных для заявки ${app.student}/${app.type}`);
     }
-    const submitted = subtractWorkingDays(ctx.today, app.submittedWorkingDaysAgo, ctx.holidays);
+    const submitted = subtractWorkingDays(ctx.today, app.submittedWorkingDaysAgo, ctx.calendar);
     const last = app.history.at(-1);
     if (!last) throw new Error("У заявки нет истории");
 
@@ -329,6 +349,7 @@ async function seedApplications(tx: Tx, ctx: SeedContext): Promise<void> {
         studentId,
         typeId,
         unitId,
+        branch: app.branch ?? "MAIN",
         status: last.status,
         formData,
         willBringOriginal: app.willBringOriginal ?? false,
@@ -342,7 +363,7 @@ async function seedApplications(tx: Tx, ctx: SeedContext): Promise<void> {
             comment: h.comment ?? null,
             actorUserId: h.by === "student" ? studentUserId : (staffUserId ?? null),
             createdAt: moscowDateTime(
-              addWorkingDays(submitted, h.afterDays, ctx.holidays),
+              addWorkingDays(submitted, h.afterDays, ctx.calendar),
               h.afterDays === 0 ? "10:15" : "14:30",
             ),
           })),
@@ -358,11 +379,13 @@ function deadlineFor(
   submitted: DateKey,
   ctx: SeedContext,
 ): Date | null {
-  const branch = stagesSchema.parse(stages)[0];
+  const code = app.branch ?? "MAIN";
+  const branch = stagesSchema.parse(stages).find((b) => b.code === code);
+  if (!branch) throw new DemoResetError(`У типа ${app.type} нет ветки этапов ${code}`);
   const last = app.history.at(-1);
-  if (!branch || !last) return null;
-  const enteredCurrent = addWorkingDays(submitted, last.afterDays, ctx.holidays);
-  const key = nextStageDeadline(branch, last.status, { submitted, enteredCurrent }, ctx.holidays);
+  if (!last) return null;
+  const enteredCurrent = addWorkingDays(submitted, last.afterDays, ctx.calendar);
+  const key = nextStageDeadline(branch, last.status, { submitted, enteredCurrent }, ctx.calendar);
   return key ? dateOnly(key) : null;
 }
 
@@ -405,7 +428,7 @@ export async function resetDemoData(options: ResetOptions = {}): Promise<ResetSu
 
   const ctx: SeedContext = {
     today: options.today ?? todayInMoscow(),
-    holidays: new Set(HOLIDAYS.map((h) => h.date)),
+    calendar: buildCalendar(HOLIDAYS),
     ids: {
       levels: new Map(),
       units: new Map(),
