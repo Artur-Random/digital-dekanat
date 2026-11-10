@@ -12,12 +12,28 @@ export async function findUserForLogin(login: string) {
   });
 }
 
-export async function recordLoginAttempt(login: string, success: boolean): Promise<void> {
-  await getDb().loginAttempt.create({ data: { login, success } });
+/** Новая попытка входа записывается как неудачная ДО проверки пароля (см. src/server/auth/login.ts). */
+export async function startLoginAttempt(login: string): Promise<string> {
+  const row = await getDb().loginAttempt.create({
+    data: { login, success: false },
+    select: { id: true },
+  });
+  return row.id;
+}
+
+export async function markLoginAttemptSucceeded(id: string): Promise<void> {
+  await getDb().loginAttempt.update({ where: { id }, data: { success: true } });
+}
+
+export async function deleteLoginAttempt(id: string): Promise<void> {
+  await getDb().loginAttempt.deleteMany({ where: { id } });
 }
 
 /** Неудачные попытки в окне после последнего успешного входа, от старых к новым. */
-export async function listRecentFailedAttempts(login: string, since: Date): Promise<Date[]> {
+export async function listRecentFailedAttempts(
+  login: string,
+  since: Date,
+): Promise<{ id: string; createdAt: Date }[]> {
   const db = getDb();
   const lastSuccess = await db.loginAttempt.findFirst({
     where: { login, success: true, createdAt: { gte: since } },
@@ -25,12 +41,11 @@ export async function listRecentFailedAttempts(login: string, since: Date): Prom
     select: { createdAt: true },
   });
   const from = lastSuccess && lastSuccess.createdAt > since ? lastSuccess.createdAt : since;
-  const rows = await db.loginAttempt.findMany({
+  return db.loginAttempt.findMany({
     where: { login, success: false, createdAt: { gt: from } },
     orderBy: { createdAt: "asc" },
-    select: { createdAt: true },
+    select: { id: true, createdAt: true },
   });
-  return rows.map((r) => r.createdAt);
 }
 
 export async function createSessionRecord(userId: string, tokenHash: string, expiresAt: Date) {

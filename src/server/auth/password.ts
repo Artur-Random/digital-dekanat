@@ -10,7 +10,9 @@ export function hashPassword(password: string): Promise<string> {
   return argon2.hash(password, OPTIONS);
 }
 
-let dummyHash: Promise<string> | null = null;
+// Хэш-заглушка считается при загрузке модуля, а не при первом запросе: иначе первый вход
+// с несуществующим логином был бы заметно дольше остальных.
+const dummyHash: Promise<string> = argon2.hash("dummy-password-for-timing", OPTIONS);
 
 /**
  * Проверка пароля. Если пользователя нет, всё равно считаем argon2 по хэшу-заглушке,
@@ -18,7 +20,6 @@ let dummyHash: Promise<string> | null = null;
  */
 export async function verifyPassword(hash: string | null, password: string): Promise<boolean> {
   if (hash === null) {
-    dummyHash ??= argon2.hash("dummy-password-for-timing", OPTIONS);
     await argon2.verify(await dummyHash, password).catch(() => false);
     return false;
   }
