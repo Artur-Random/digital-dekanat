@@ -135,6 +135,17 @@ describe("запуск хука как процесса", () => {
     expect(content).toMatch(/### \d{4}-\d{2}-\d{2} \d{2}:\d{2} МСК\n\n~~~~\nТест\n~~~~\n$/);
   });
 
+  it("системное уведомление среды не попадает в журнал", () => {
+    const { dir, result } = run(
+      JSON.stringify({
+        prompt: "<task-notification>\n<status>pending</status>\n</task-notification>",
+      }),
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("");
+    expect(() => readFileSync(join(dir, PROMPTS_FILE), "utf8")).toThrow();
+  });
+
   it("при ошибке пишет в stderr без содержимого входа и всё равно выходит с 0", () => {
     const { result } = run("password=hunter2 не JSON");
     expect(result.status).toBe(0);
