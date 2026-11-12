@@ -157,6 +157,15 @@ function projectDir() {
  * @param {string} root корень проекта
  * @param {Date} now
  */
+/**
+ * Сообщения, которые среда Claude Code отправляет от своего имени (уведомления о фоновых задачах
+ * и событиях GitHub). Это не промпты Кирилла, в журнал они не пишутся.
+ * @param {string} prompt
+ */
+export function isSystemMessage(prompt) {
+  return /^\s*<task-notification>/.test(prompt);
+}
+
 export function handleInput(raw, root, now) {
   /** @type {unknown} */
   const input = JSON.parse(raw);
@@ -165,6 +174,7 @@ export function handleInput(raw, root, now) {
   if (typeof prompt !== "string") {
     throw new Error("во входных данных нет строкового поля prompt");
   }
+  if (isSystemMessage(prompt)) return;
   const file = join(root, PROMPTS_FILE);
   mkdirSync(dirname(file), { recursive: true });
   if (!existsSync(file)) {

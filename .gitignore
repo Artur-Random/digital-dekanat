@@ -159,3 +159,6 @@ next-env.d.ts
 
 # Архив исходников для жюри (npm run submission:archive)
 dist-submission/
+
+# Скомпилированные скрипты для образа tools
+dist/

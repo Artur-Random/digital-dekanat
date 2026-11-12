@@ -1,0 +1,17 @@
+# В контекст сборки не попадают секреты, зависимости и артефакты.
+.env
+.env.*
+!.env.example
+node_modules
+.next
+dist
+dist-submission
+src/generated
+test-results
+playwright-report
+docs/process/screenshots
+.git
+.claude
+PROCESS.md
+docs/process
+*.tsbuildinfo

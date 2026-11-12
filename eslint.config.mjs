@@ -48,5 +48,6 @@ export default defineConfig([
     "src/generated/**",
     "playwright-report/**",
     "test-results/**",
+    "dist/**",
   ]),
 ]);

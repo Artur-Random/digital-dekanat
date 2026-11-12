@@ -1,0 +1,114 @@
+# Production stack on the server (/opt/dekanat). Images are loaded with `docker load`,
+# never pulled: pull_policy: never. Only Caddy publishes ports.
+#
+# Run:  docker compose -f compose.prod.yml --env-file .env --env-file release.env up -d
+#   .env         created once by bootstrap.sh (secrets; deploy never reads or prints it)
+#   release.env  APP_TAG=<short sha>, written by remote-deploy.sh
+name: dekanat
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:18.6-alpine
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is not set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is not set}
+      TZ: Europe/Moscow
+    volumes:
+      - pgdata:/var/lib/postgresql
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    mem_limit: 512m
+    logging: *logging
+
+  app:
+    image: dekanat-app:${APP_TAG:?APP_TAG is not set}
+    pull_policy: never
+    restart: unless-stopped
+    # Only what the app needs: no POSTGRES_PASSWORD and no demo passwords in its environment.
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is not set}
+      NODE_ENV: production
+      TZ: Europe/Moscow
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 256
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    mem_limit: 512m
+    logging: *logging
+
+  caddy:
+    image: caddy:2.11.9-alpine
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN is not set}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [edge, backend]
+    mem_limit: 128m
+    logging: *logging
+
+  # Runs only on demand: `... --profile tools run --rm tools migrate|demo-reset`.
+  tools:
+    image: dekanat-tools:${APP_TAG:?APP_TAG is not set}
+    pull_policy: never
+    profiles: ["tools"]
+    env_file: .env
+    environment:
+      TZ: Europe/Moscow
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 512m
+    logging: *logging
+
+networks:
+  # db, app and tools: no route to the internet (no external requests at runtime).
+  backend:
+    internal: true
+  # Only Caddy: published ports and Let's Encrypt. Caddy reaches app through backend.
+  edge: {}
+
+volumes:
+  pgdata: {}
+  caddy_data: {}
+  caddy_config: {}

@@ -1,0 +1,210 @@
+# Deploy to the Timeweb Cloud server: checks -> build images -> scp -> docker load -> migrate ->
+# demo-reset -> up -> external health check (rollback on failure) -> prod smoke.
+# Images never come from a registry on the server: docker save -> scp -> docker load.
+# Nothing here prints secrets, /opt/dekanat/.env or demo passwords.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Deploy even if DEPLOY_FROZEN=true (only to restore availability)"
+        type: boolean
+        default: false
+      rollback_to:
+        description: "Switch to a commit SHA whose images are already on the server (no build)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.rollback_to == '' }}
+    uses: ./.github/workflows/checks.yml
+
+  deploy:
+    needs: checks
+    # Only main reaches the server; secrets live in the "production" environment,
+    # which allows deployments from the main branch only.
+    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.checks.result == 'success' || needs.checks.result == 'skipped') }}
+    environment: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SITE_URL: ${{ vars.SITE_URL }}
+      DEPLOY_FROZEN: ${{ vars.DEPLOY_FROZEN }}
+      EVENT: ${{ github.event_name }}
+      FORCE: ${{ inputs.force }}
+      ROLLBACK_TO: ${{ inputs.rollback_to }}
+      # Only a boolean leaves the secrets context here; values are used in single steps below.
+      HAS_SSH: ${{ secrets.SSH_HOST != '' && secrets.SSH_USER != '' && secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_KNOWN_HOSTS != '' }}
+    steps:
+      - name: Decide whether to deploy
+        id: gate
+        run: |
+          tag="${GITHUB_SHA::7}"
+          mode=deploy
+          if [ -n "$ROLLBACK_TO" ]; then
+            if ! [[ "$ROLLBACK_TO" =~ ^[0-9a-f]{7,40}$ ]]; then
+              echo "rollback_to must be a commit SHA"; exit 1
+            fi
+            tag="${ROLLBACK_TO::7}"; mode=rollback
+          fi
+          reason=""
+          if [ "$HAS_SSH" != "true" ]; then
+            reason="нет секретов SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS (сервер ещё не подготовлен)"
+          elif [ -z "$SITE_URL" ]; then
+            reason="не задана переменная репозитория SITE_URL"
+          elif [ "$DEPLOY_FROZEN" = "true" ] && [ "$FORCE" != "true" ]; then
+            reason="деплой заморожен (DEPLOY_FROZEN=true); вручную только с force=true для восстановления доступности"
+          fi
+          if [ -n "$reason" ]; then proceed=false; else proceed=true; fi
+          {
+            echo "tag=$tag"; echo "mode=$mode"; echo "proceed=$proceed"
+          } >> "$GITHUB_OUTPUT"
+          if [ "$proceed" = "false" ]; then
+            echo "### Деплой пропущен: $reason" >> "$GITHUB_STEP_SUMMARY"
+            echo "Деплой пропущен: $reason"
+          else
+            echo "### Деплой: $mode $tag" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Images are built on every push to main, even when the deploy is skipped:
+      # a broken Dockerfile shows up right after the merge, not on the server.
+      - name: Build images app and tools
+        if: steps.gate.outputs.mode == 'deploy'
+        env:
+          TAG: ${{ steps.gate.outputs.tag }}
+        run: |
+          start=$(date +%s)
+          docker build --target app --build-arg APP_VERSION="$TAG" -t "dekanat-app:$TAG" .
+          docker build --target tools -t "dekanat-tools:$TAG" .
+          docker save "dekanat-app:$TAG" "dekanat-tools:$TAG" | gzip -1 > "images-$TAG.tar.gz"
+          {
+            echo "| Образ | Размер |"; echo "|---|---|"
+            docker images --format '| {{.Repository}}:{{.Tag}} | {{.Size}} |' | grep dekanat
+            echo "| images-$TAG.tar.gz | $(du -h "images-$TAG.tar.gz" | cut -f1) |"
+            echo; echo "Сборка: $(( $(date +%s) - start )) с"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check DNS points to the server
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          host="$(echo "$SITE_URL" | sed -E 's#^https?://##; s#/.*$##')"
+          for name in "$host" "www.$host"; do
+            if ! getent ahostsv4 "$name" | awk '{print $1}' | sort -u | grep -qx "$SSH_HOST"; then
+              echo "DNS ещё не указывает на сервер: $name" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          done
+          echo "DNS: $host и www.$host указывают на сервер"
+
+      - name: Configure SSH (strict host key checking)
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          ( umask 077
+            printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+            printf '%s\n' "Host dekanat" "  HostName $SSH_HOST" "  User $SSH_USER" \
+              "  IdentityFile ~/.ssh/deploy_key" "  IdentitiesOnly yes" \
+              "  StrictHostKeyChecking yes" "  UserKnownHostsFile ~/.ssh/known_hosts" \
+              "  BatchMode yes" "  ConnectTimeout 20" "  ServerAliveInterval 15" > ~/.ssh/config )
+          ssh dekanat true
+          echo "SSH: соединение установлено"
+
+      - name: Upload stack files and images
+        if: steps.gate.outputs.proceed == 'true' && steps.gate.outputs.mode == 'deploy'
+        env:
+          TAG: ${{ steps.gate.outputs.tag }}
+        run: |
+          scp -q deploy/compose.prod.yml deploy/Caddyfile deploy/remote-deploy.sh dekanat:/opt/dekanat/
+          ssh dekanat chmod 750 /opt/dekanat/remote-deploy.sh
+          missing=""
+          for ref in $(sed -nE 's/^ +image: ((postgres|caddy):[^ ]+)$/\1/p' deploy/compose.prod.yml); do
+            if ! ssh dekanat /opt/dekanat/remote-deploy.sh has-image "$ref"; then missing="$missing $ref"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "Передаю базовые образы:$missing"
+            for ref in $missing; do docker pull -q "$ref"; done
+            # shellcheck disable=SC2086
+            docker save $missing | gzip -1 > base-images.tar.gz
+            scp -q base-images.tar.gz dekanat:/opt/dekanat/
+          fi
+          scp -q "images-$TAG.tar.gz" dekanat:/opt/dekanat/
+
+      - name: Deploy on the server
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          TAG: ${{ steps.gate.outputs.tag }}
+          MODE: ${{ steps.gate.outputs.mode }}
+        run: ssh dekanat /opt/dekanat/remote-deploy.sh "$MODE" "$TAG"
+
+      # Runs even if the server step failed (migration, demo-reset, healthcheck), so a broken
+      # release is always rolled back.
+      - name: External health check (rollback on failure)
+        if: ${{ !cancelled() && steps.gate.outputs.proceed == 'true' }}
+        env:
+          TAG: ${{ steps.gate.outputs.tag }}
+          MODE: ${{ steps.gate.outputs.mode }}
+        run: |
+          ok=""
+          for _ in $(seq 1 30); do
+            body="$(curl -fsS --max-time 15 "$SITE_URL/api/health" || true)"
+            db="$(echo "$body" | jq -r '.db // empty' 2>/dev/null || true)"
+            ver="$(echo "$body" | jq -r '.version // empty' 2>/dev/null || true)"
+            if [ "$db" = "ok" ] && [ "$ver" = "$TAG" ]; then ok=1; break; fi
+            sleep 10
+          done
+          if [ -n "$ok" ]; then
+            echo "Health: db ok, version $TAG" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Health check failed (db=$db, version=$ver)" | tee -a "$GITHUB_STEP_SUMMARY"
+          prev="$(ssh dekanat /opt/dekanat/remote-deploy.sh previous || true)"
+          if [ "$MODE" = "deploy" ] && [ -n "$prev" ]; then
+            ssh dekanat /opt/dekanat/remote-deploy.sh rollback "$prev"
+            echo "Откат на $prev выполнен" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
+
+      # The key is removed before npm ci: dependency install scripts must never see it.
+      - name: Remove SSH key
+        if: always()
+        run: rm -rf ~/.ssh
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.gate.outputs.proceed == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Smoke tests against the deployed site (no login, no data changes)
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          TAG: ${{ steps.gate.outputs.tag }}
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          host="$(echo "$SITE_URL" | sed -E 's#^https?://##; s#/.*$##')"
+          BASE_URL="$SITE_URL" SMOKE_WWW_URL="https://www.$host" EXPECT_VERSION="$TAG" \
+            npm run test:prod-smoke
