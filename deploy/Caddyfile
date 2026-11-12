@@ -1,0 +1,15 @@
+# Caddy: automatic HTTPS (Let's Encrypt), HTTP -> HTTPS redirect, www -> apex redirect.
+# Security headers and Cache-Control come from Next.js and are not overridden here.
+# SITE_DOMAIN comes from /opt/dekanat/.env (studcab.ru). With SITE_DOMAIN=localhost Caddy
+# issues a certificate from its internal CA (local test only).
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	# Only HSTS is added; no preload and no includeSubDomains.
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy app:3000
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} 308
+}
