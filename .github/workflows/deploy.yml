@@ -32,7 +32,10 @@ jobs:
 
   deploy:
     needs: checks
-    if: ${{ always() && (needs.checks.result == 'success' || needs.checks.result == 'skipped') }}
+    # Only main reaches the server; secrets live in the "production" environment,
+    # which allows deployments from the main branch only.
+    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.checks.result == 'success' || needs.checks.result == 'skipped') }}
+    environment: production
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -156,8 +159,10 @@ jobs:
           MODE: ${{ steps.gate.outputs.mode }}
         run: ssh dekanat /opt/dekanat/remote-deploy.sh "$MODE" "$TAG"
 
+      # Runs even if the server step failed (migration, demo-reset, healthcheck), so a broken
+      # release is always rolled back.
       - name: External health check (rollback on failure)
-        if: steps.gate.outputs.proceed == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.proceed == 'true' }}
         env:
           TAG: ${{ steps.gate.outputs.tag }}
           MODE: ${{ steps.gate.outputs.mode }}
@@ -182,6 +187,11 @@ jobs:
           fi
           exit 1
 
+      # The key is removed before npm ci: dependency install scripts must never see it.
+      - name: Remove SSH key
+        if: always()
+        run: rm -rf ~/.ssh
+
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: steps.gate.outputs.proceed == 'true'
         with:
@@ -198,7 +208,3 @@ jobs:
           host="$(echo "$SITE_URL" | sed -E 's#^https?://##; s#/.*$##')"
           BASE_URL="$SITE_URL" SMOKE_WWW_URL="https://www.$host" EXPECT_VERSION="$TAG" \
             npm run test:prod-smoke
-
-      - name: Remove SSH key
-        if: always()
-        run: rm -rf ~/.ssh

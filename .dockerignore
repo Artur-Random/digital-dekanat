@@ -12,4 +12,6 @@ playwright-report
 docs/process/screenshots
 .git
 .claude
+PROCESS.md
+docs/process
 *.tsbuildinfo

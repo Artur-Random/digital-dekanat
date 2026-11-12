@@ -24,7 +24,7 @@ services:
       TZ: Europe/Moscow
     volumes:
       - pgdata:/var/lib/postgresql
-    networks: [internal]
+    networks: [backend]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -38,14 +38,18 @@ services:
     image: dekanat-app:${APP_TAG:?APP_TAG is not set}
     pull_policy: never
     restart: unless-stopped
-    env_file: .env
+    # Only what the app needs: no POSTGRES_PASSWORD and no demo passwords in its environment.
     environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is not set}
       NODE_ENV: production
       TZ: Europe/Moscow
     depends_on:
       db:
         condition: service_healthy
-    networks: [internal]
+    networks: [backend]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 256
     healthcheck:
       test:
         - CMD
@@ -76,7 +80,7 @@ services:
     depends_on:
       app:
         condition: service_healthy
-    networks: [internal]
+    networks: [edge, backend]
     mem_limit: 128m
     logging: *logging
 
@@ -91,12 +95,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    networks: [internal]
+    networks: [backend]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
     mem_limit: 512m
     logging: *logging
 
 networks:
-  internal: {}
+  # db, app and tools: no route to the internet (no external requests at runtime).
+  backend:
+    internal: true
+  # Only Caddy: published ports and Let's Encrypt. Caddy reaches app through backend.
+  edge: {}
 
 volumes:
   pgdata: {}

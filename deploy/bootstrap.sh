@@ -2,16 +2,17 @@
 # One-time server setup for digital-dekanat (Ubuntu 24.04). Run as root:
 #   bash bootstrap.sh studcab.ru                    first run
 #   bash bootstrap.sh studcab.ru --show-passwords   re-run and print demo passwords again
-# Idempotent: re-running never overwrites /opt/dekanat/.env or an installed deploy key.
-# To rotate the deploy key: delete the "dekanat-deploy" line from
-# /home/deploy/.ssh/authorized_keys and run the script again.
+# Idempotent: never overwrites /opt/dekanat/.env or an installed deploy key. To rotate the key,
+# delete the "dekanat-deploy" line from /home/deploy/.ssh/authorized_keys and run again.
 set -euo pipefail
-
-DOMAIN="${1:-}"; OPT="${2:-}"
-DIR=/opt/dekanat; ENVF="$DIR/.env"; KEYF=/root/dekanat-deploy-key
+DOMAIN="${1:-}"; OPT="${2:-}"; DIR=/opt/dekanat; ENVF="$DIR/.env"; KEYF=/root/dekanat-deploy-key
 AUTH=/home/deploy/.ssh/authorized_keys; ALPHA='abcdefghijkmnpqrstuvwxyz23456789'
-
 die() { echo "ERROR: $*" >&2; exit 1; }
+# If we fail before the key is printed, drop it from authorized_keys so a re-run makes a new one.
+cleanup() {
+  rm -f "$KEYF" "$KEYF.pub"
+  [[ "${NEWKEY:-no}" == yes && "${PRINTED:-no}" != yes ]] && sed -i '/ dekanat-deploy$/d' "$AUTH"
+  return 0; }
 step() { echo "== $*"; }
 # Random string from an alphabet; head/cut read all input, so no SIGPIPE under pipefail.
 rnd() { head -c 4096 /dev/urandom | LC_ALL=C tr -dc "$1" | cut -c "1-$2"; }
@@ -48,15 +49,17 @@ install -d -o deploy -g deploy -m 700 /home/deploy/.ssh
 NEWKEY=no
 if ! grep -q 'dekanat-deploy' "$AUTH" 2>/dev/null; then
   rm -f "$KEYF" "$KEYF.pub"
+  trap cleanup EXIT
   ssh-keygen -q -t ed25519 -N '' -C dekanat-deploy -f "$KEYF"
-  cat "$KEYF.pub" >> "$AUTH"
+  # restrict: no port, agent or X11 forwarding and no pty; commands and scp still work.
+  echo "restrict $(cat "$KEYF.pub")" >> "$AUTH"
   NEWKEY=yes
 fi
 chown deploy:deploy "$AUTH" && chmod 600 "$AUTH"
 step "firewall"
 { ufw default deny incoming && ufw default allow outgoing &&
   ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443 && ufw --force enable; } ||
-  echo "WARN: ufw could not be configured"
+  die "ufw failed; refusing to leave the server without a firewall"
 step "$ENVF"
 NEWENV=no
 if [[ ! -f "$ENVF" ]]; then
@@ -88,7 +91,7 @@ printf '[Timer]\nOnCalendar=*-*-* 04:00:00 Europe/Moscow\nPersistent=true\n%s\n%
 { systemctl daemon-reload && systemctl enable --now dekanat-reset.timer; } ||
   echo "WARN: systemd timer not enabled"
 step "sshd: keys only, no root login"
-grep -q '^ssh-ed25519 .* dekanat-deploy$' "$AUTH" || die "deploy key missing, sshd unchanged"
+grep -q '^restrict ssh-ed25519 .* dekanat-deploy$' "$AUTH" || die "no deploy key; sshd unchanged"
 printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin no\n' \
   > /etc/ssh/sshd_config.d/00-dekanat.conf
 mkdir -p /run/sshd
@@ -102,11 +105,11 @@ if [[ "$NEWKEY" == yes || "$NEWENV" == yes || -n "$OPT" ]]; then
   printf '\n%s\n%s\n' "!!! Do not paste this output into any chat, including Claude Code. !!!" \
     "!!! Copy values into GitHub secrets and a password manager only.   !!!"
   echo "==================== BEGIN SECRETS ===================="
-  echo "SSH_HOST: $IP   (check it matches the IP in the Timeweb panel)"
-  printf 'SSH_USER: deploy\n--- SSH_KNOWN_HOSTS (one line) ---\n%s\n' "$IP $HOSTKEY"
+  printf 'SSH_HOST: %s   (check it matches the IP in the Timeweb panel)\nSSH_USER: deploy\n' "$IP"
+  printf -- '--- SSH_KNOWN_HOSTS (one line) ---\n%s\n' "$IP $HOSTKEY"
   if [[ "$NEWKEY" == yes ]]; then
     echo "--- SSH_PRIVATE_KEY (all lines, including BEGIN and END) ---"
-    cat "$KEYF"
+    cat "$KEYF"; PRINTED=yes
   fi
   if [[ "$NEWENV" == yes || -n "$OPT" ]]; then
     echo "--- demo passwords (password manager) ---"
@@ -114,5 +117,4 @@ if [[ "$NEWKEY" == yes || "$NEWENV" == yes || -n "$OPT" ]]; then
   fi
   echo "===================== END SECRETS ====================="
 fi
-rm -f "$KEYF" "$KEYF.pub"
 echo "bootstrap done"

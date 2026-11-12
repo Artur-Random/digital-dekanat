@@ -26,8 +26,6 @@ jobs:
     timeout-minutes: 5
     env:
       SITE_URL: ${{ vars.SITE_URL }}
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
     steps:
       - name: Probe /api/health
         id: probe
@@ -51,11 +49,14 @@ jobs:
             now="$(TZ=Europe/Moscow date +%H%M)"
             today="$(TZ=Europe/Moscow date +%F)"
             reset="$(echo "$body" | jq -r '.demoResetAt // empty')"
+            # Only a well-formed timestamp goes further (it ends up in step outputs and the issue).
+            [[ "$reset" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}\+03:00$ ]] || reset=""
             if [ "$now" -ge 0430 ] && [ "${reset:0:10}" != "$today" ]; then
               problem="ночной сброс демо-данных не прошёл сегодня (demoResetAt: ${reset:-нет})"
             fi
           fi
           version="$(echo "$body" | jq -r '.version // empty' 2>/dev/null || true)"
+          [[ "$version" =~ ^[0-9a-z]{1,40}$ ]] || version=""
           if [ -n "$problem" ]; then
             echo "state=fail" >> "$GITHUB_OUTPUT"
             echo "problem=$problem" >> "$GITHUB_OUTPUT"
@@ -68,6 +69,8 @@ jobs:
       - name: Open, comment or close the uptime issue
         if: steps.probe.outputs.state != 'skip'
         env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           STATE: ${{ steps.probe.outputs.state }}
           PROBLEM: ${{ steps.probe.outputs.problem }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
