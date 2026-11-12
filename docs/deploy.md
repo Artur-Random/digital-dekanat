@@ -74,9 +74,11 @@ bash bootstrap.sh studcab.ru
 
 ### 4. Завести секреты и переменные в GitHub
 
-Репозиторий → **Settings → Secrets and variables → Actions**.
+**Секреты SSH — в окружение `production`**, которое разрешает деплой только из ветки `main`. Так ветку, не прошедшую ревью, нельзя выкатить на сервер.
 
-Вкладка **Secrets** → «New repository secret»:
+1. Репозиторий → **Settings → Environments → New environment**, имя `production` → «Configure environment».
+2. **Deployment branches and tags** → «Selected branches and tags» → «Add deployment branch or tag rule» → `main`.
+3. Там же, **Environment secrets** → «Add environment secret»:
 
 | Название          | Значение                                                     |
 | ----------------- | ------------------------------------------------------------ |
@@ -85,7 +87,7 @@ bash bootstrap.sh studcab.ru
 | `SSH_PRIVATE_KEY` | ключ из вывода bootstrap, все строки целиком                 |
 | `SSH_KNOWN_HOSTS` | строка `SSH_KNOWN_HOSTS` из вывода bootstrap                 |
 
-Вкладка **Variables** → «New repository variable»:
+**Переменные — на уровне репозитория** (их читает и мониторинг): **Settings → Secrets and variables → Actions → вкладка Variables** → «New repository variable»:
 
 | Название        | Значение             |
 | --------------- | -------------------- |
@@ -117,13 +119,13 @@ GitHub → **Actions → deploy → Run workflow** (ветка `main`). Поля
 
 ### Откатиться
 
-GitHub → **Actions → deploy → Run workflow**, в поле `rollback_to` впиши SHA коммита, на который откатываемся (первые 7 символов). На сервере хранятся образы трёх последних версий; откат идёт без сборки и без миграций. Если версии уже нет на сервере, сделай `git revert` нужного коммита через PR.
+GitHub → **Actions → deploy → Run workflow**, в поле `rollback_to` впиши SHA коммита, на который откатываемся (первые 7 символов). На сервере хранятся образы трёх последних версий; откат идёт без сборки и без миграций: **схема базы не откатывается**. Если новая версия добавила миграцию, старая версия работает с более новой схемой; сейчас все миграции только добавляют поля и таблицы, так что это безопасно, но перед откатом через несовместимую миграцию нужен отдельный план. Если версии уже нет на сервере, сделай `git revert` нужного коммита через PR.
 
-Если деплой упал на проверке `/api/health`, workflow сам возвращает предыдущую версию.
+Если деплой упал на сервере (миграция, сброс, healthcheck) или на проверке `/api/health`, workflow сам возвращает предыдущую версию приложения.
 
 ### Заморозить деплой
 
-Settings → Secrets and variables → Actions → **Variables** → `DEPLOY_FROZEN` = `true`. После этого слияния в `main` не попадают на сервер (в отчёте запуска будет «деплой заморожен»).
+Settings → Secrets and variables → Actions → **Variables** → `DEPLOY_FROZEN` = `true` (переменная репозитория). После этого слияния в `main` не попадают на сервер (в отчёте запуска будет «деплой заморожен»).
 
 Аварийный деплой при заморозке: Run workflow с галочкой `force`. Только для восстановления доступности сайта, с записью в PROCESS.md.
 
