@@ -24,9 +24,10 @@
 - Next.js (App Router) + TypeScript в strict-режиме.
 - PostgreSQL + Prisma.
 - Tailwind CSS.
-- Docker Compose: локально база данных, на сервере всё приложение.
+- Docker Compose: локально база данных, на сервере всё приложение (`deploy/compose.prod.yml`: db, app, caddy, tools).
 - Playwright: e2e-тесты и автоскриншоты. Vitest: unit-тесты.
-- Хостинг: виртуальная машина в Yandex Cloud, деплой через GitHub Actions (отдельное задание).
+- Хостинг: Timeweb Cloud (Москва, Ubuntu 24.04), домен studcab.ru. HTTPS и редиректы делает Caddy (Let's Encrypt).
+- Деплой через GitHub Actions. Образы собираются в Actions и передаются на сервер без реестра: `docker save` → `scp` → `docker load`. Docker на сервере из репозитория Ubuntu.
 
 Версии бери актуальные стабильные на момент установки, фиксируй точно (без `^` и `~`). Список версий записывай в PROCESS.md.
 
@@ -59,7 +60,7 @@ docs/                      spec, реестр норм, process/, licenses.md
 
 1. Проверка доступа только на сервере. Каждая страница, Server Action и route handler сначала получает сессию из cookie и вызывает guard (`requireStudent()` или `requireStaff()`).
 2. Prisma вызывается только в `src/server/dal`. Функции DAL принимают `actor` из сессии и всегда фильтруют по владельцу: студент видит только записи со своим `studentId`, сотрудник только заявки своего подразделения.
-   Исключения (решение Кирилла от 10.11): импорт только типов (`import type`) из `@/generated/prisma` в любом месте `src/`; Prisma в `e2e/helpers/db.ts` для ID демо-записей и очистки попыток входа в тестах; `disconnectDb` из `@/server/db` в скриптах `scripts/`, которые должны завершиться. Функции DAL без `actor` допустимы только для входа и сессий (`src/server/dal/auth.ts`), сброса демо-данных (`src/server/dal/demo/`) и проверки базы для публичного `/api/health` (`src/server/dal/health.ts`, только `SELECT 1`, без данных пользователей).
+   Исключения (решение Кирилла от 10.11): импорт только типов (`import type`) из `@/generated/prisma` в любом месте `src/`; Prisma в `e2e/helpers/db.ts` для ID демо-записей и очистки попыток входа в тестах; `disconnectDb` из `@/server/db` в скриптах `scripts/`, которые должны завершиться. Функции DAL без `actor` допустимы только для входа и сессий (`src/server/dal/auth.ts`), сброса демо-данных (`src/server/dal/demo/`) и проверки базы для публичного `/api/health` (`src/server/dal/health.ts`: `SELECT 1` и время последнего сброса демо-данных, без данных пользователей).
 3. Никогда не принимай `studentId`, `userId`, `unitId` или роль от клиента. Они берутся только из сессии.
 4. Чужая или несуществующая запись даёт `notFound()` (404), а не 403, чтобы не подтверждать существование записи.
 5. Пароли хэшируются argon2id. Пароли, токены и содержимое cookie никогда не попадают в логи.
@@ -143,6 +144,16 @@ docs/                      spec, реестр норм, process/, licenses.md
 - Коммит: хэш и сообщение.
 ```
 
+## Деплой
+
+Подробно: `docs/deploy.md`.
+
+- Слияние в main автоматически запускает `deploy.yml`: проверки, сборка образов, загрузка на сервер, миграции, сброс демо-данных, проверка `/api/health` (откат при сбое) и smoke-тесты без входа.
+- Заморозка: переменная репозитория `DEPLOY_FROZEN=true`. Деплой по push пропускается; вручную только с `force=true` и только для восстановления доступности, с записью в PROCESS.md.
+- На развёрнутом сайте запрещены тесты с входом под демо-аккаунтами и тесты блокировки входа: они ломают демо экспертам. Против сайта идёт только `npm run test:prod-smoke`.
+- Демо-пароли, ключи, IP сервера и содержимое `.env` никогда не попадают в репозиторий, логи Actions, тесты, документы и чаты. Пароли демо в CI генерируются в каждом прогоне и маскируются.
+- Секреты GitHub: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS`. Переменные: `SITE_URL`, `DEPLOY_FROZEN`.
+
 ## Команды
 
 Список скриптов из `package.json` поддерживай актуальным здесь:
@@ -154,7 +165,9 @@ docs/                      spec, реестр норм, process/, licenses.md
 - `npm run lint`: ESLint без предупреждений.
 - `npm run format`: Prettier, исправляет файлы. `npm run format:check`: только проверка.
 - `npm run test`: unit-тесты Vitest (`src/**/*.test.ts`, `.claude/hooks/*.test.ts`).
-- `npm run test:e2e`: Playwright. Без `BASE_URL` сам поднимает dev-сервер.
+- `npm run test:e2e`: Playwright, проект `chromium` (всё, кроме `e2e/prod-smoke`). Без `BASE_URL` сам поднимает dev-сервер.
+- `npm run test:prod-smoke`: проверки развёрнутого сайта без входа (`BASE_URL`, `SMOKE_WWW_URL`, `EXPECT_VERSION`).
+- `npm run build:tools`: скрипт сброса для образа tools, компиляция в `dist/reset-demo.mjs` (esbuild).
 - `npm run screenshots`: автоскриншоты всех экранов из `e2e/screens.ts` в 360 и 1440 px. Без запущенного сервера сам поднимает `next dev`.
 - `npm run db:migrate`: применить миграции (`prisma migrate deploy`). Новая миграция в разработке: `npx prisma migrate dev --name <имя>`.
 - `npm run demo:reset`: удалить все данные и засеять демо заново (даты от «сегодня» по Москве). Нужны `DEMO_PASSWORD_*` в `.env`. Это же `prisma db seed`.

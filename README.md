@@ -6,9 +6,13 @@
 
 Кабинет показывает не ссылки, а то, что происходит у студента и что ему нужно сделать: пары с переносами, долги со сроками и последствиями, заявления со сроками каждого этапа. Каждое утверждение о правилах ссылается на пункт положения из [реестра норм](docs/norms-registry.md). Подробности: [спецификация](docs/spec-v1.md), [описание процесса](PROCESS.md).
 
+## Сайт
+
+https://studcab.ru — деплой автоматически после каждого слияния в `main`, см. [docs/deploy.md](docs/deploy.md).
+
 ## Стек
 
-Next.js 16 (App Router) + TypeScript (strict), PostgreSQL 18 + Prisma 7, Tailwind CSS 4, Vitest, Playwright, Docker Compose.
+Next.js 16 (App Router) + TypeScript (strict), PostgreSQL 18 + Prisma 7, Tailwind CSS 4, Vitest, Playwright, Docker Compose. Production: Timeweb Cloud, Caddy (HTTPS), GitHub Actions.
 
 ## Запуск локально
 
