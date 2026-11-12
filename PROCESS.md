@@ -420,6 +420,59 @@
 - Субагенты: не вызывались.
 - Коммит: см. PR задания 2д.
 
+## 12.11.2026 14:30 МСК. Задача 3, часть А: инфраструктура деплоя на Timeweb Cloud
+
+- Задача: production-образы, стек на сервере с Caddy и HTTPS, bootstrap сервера, CI/CD, ночной сброс, мониторинг, документы.
+- Что сделано:
+  - Версии: базовый образ `node:22.23.4-bookworm-slim`, `postgres:18.6-alpine`, `caddy:2.11.9-alpine` (последняя стабильная Caddy), esbuild 0.28.2 (MIT). Actions: `actions/checkout` v7.0.1 и `actions/setup-node` v7.1.0, закреплены по SHA.
+  - Образы: `app` — standalone Next.js (`output: "standalone"`), запуск от пользователя `node`, `HOSTNAME=0.0.0.0`, порт 3000, `NEXT_TELEMETRY_DISABLED=1`. `tools` — Prisma CLI с нативным schema-engine, миграции и `dist/reset-demo.mjs` (esbuild, запуск `node --conditions=react-server`, без tsx), `CHECKPOINT_DISABLE=1`. Размеры локально: app 441 МБ, tools 745 МБ; общий архив `docker save app tools | gzip` — 185 МБ, postgres+caddy — 134 МБ (передаются один раз).
+  - `prisma` и `dotenv` перенесены в `dependencies`: они нужны в образе tools для миграций.
+  - `deploy/compose.prod.yml`: db (без портов), app, caddy (80, 443, 443/udp), tools в profile; одна внутренняя сеть; `pull_policy: never`; лимиты 512M/512M/128M; ротация логов; healthcheck db и app. Реальное потребление в локальном стеке: app около 122 МБ, db около 42 МБ, caddy около 15 МБ — лимиты с запасом.
+  - `deploy/Caddyfile`: `{$SITE_DOMAIN}` с HSTS `max-age=31536000`, `encode zstd gzip`, `reverse_proxy app:3000`; `www.{$SITE_DOMAIN}` → 308 с путём и параметрами. Заголовки Next.js не трогаются.
+  - `deploy/remote-deploy.sh` (на сервере): load → migrate → demo-reset → up → ожидание healthcheck → хранение 3 последних тегов; `rollback`, `has-image`, `previous`.
+  - `/api/health`: `version` (короткий SHA из `APP_VERSION`) и `demoResetAt` (время последнего успешного сброса по Москве). Хранится в новой таблице `DemoReset`: сброс пишет в неё строку в конце транзакции и саму таблицу не очищает. Миграция `demo_reset_log`.
+  - Cache-Control: Next.js 16 уже отдаёт `private, no-cache, no-store, max-age=0, must-revalidate` для страниц за входом и RSC-запросов, статика `/_next/static` идёт с `public, max-age=31536000, immutable`. Код не менялся, поведение закреплено тестом `e2e/security/cache.spec.ts`, туда же добавлен сценарий «выход → назад».
+  - `deploy/bootstrap.sh`: ASCII, 118 строк, максимум 98 символов в строке, без табуляций, shellcheck без замечаний. Проверено в контейнере `ubuntu:24.04`:
+    - установка пакетов, часовой пояс, пользователь `deploy` в группе docker;
+    - права 750/600, `.env` с 9 ключами;
+    - пароли формата `xxxx-xxxx-xxxx` из алфавита без 0/o/1/l;
+    - идемпотентность: 3 запуска, ключ один, `.env` не перезаписан;
+    - приватный ключ печатается один раз и удаляется, `--show-passwords`, отказ на неверных аргументах;
+    - юниты systemd и `systemd-analyze calendar` (следующий запуск 04:00 MSK);
+    - эффективная конфигурация sshd `passwordauthentication no`, `permitrootlogin no`.
+
+    В контейнере не проверено (нужны права ядра и systemd): ufw, swapon, включение таймера, запуск docker через systemd, reload sshd.
+
+  - GitHub Actions:
+    - `checks.yml` (переиспользуемый): typecheck, lint, format, unit, e2e на production-сборке с сервисом postgres; демо-пароли генерируются в прогоне и маскируются через `::add-mask::`;
+    - `ci.yml`;
+    - `deploy.yml`: пропуск без секретов или при заморозке с сообщением в summary, проверка DNS для `studcab.ru` и `www`, SSH только со `StrictHostKeyChecking=yes`, scp образов, проверка `/api/health` с откатом, prod-smoke, ручной `rollback_to`, concurrency;
+    - `uptime.yml`: раз в час, issue с меткой uptime.
+  - e2e: проект `prod-smoke` (только проверки без входа); `npm run test:e2e` теперь запускает только проект `chromium`.
+  - Документы: `docs/deploy.md`, CLAUDE.md (Стек, Деплой, Команды, исключение для `health.ts`), план в `docs/spec-v1.md`, `docs/submission` (статусы, «После отправки», заморозка через `DEPLOY_FROZEN`), лицензии.
+- Локальная проверка production-стека (п. 7). `compose.prod.yml` поднят через `remote-deploy.sh` с `SITE_DOMAIN=localhost`, Caddy с внутренним сертификатом. Против `https://localhost`:
+  - prod-smoke 3/3 (www пропущен);
+  - полный набор `chromium` 26/26: вход, cookie `__Host-dd_session` с Secure (закрыт открытый пункт 11 задания 2), `no-store`, «выход → назад», 13 тестов подмены адреса и входа;
+  - сброс через `tools demo-reset` обновил `demoResetAt`.
+
+  Миграции и сброс шли в контейнерах без доступа в интернет: движки Prisma внутри образа.
+
+- Что пошло не так и как исправлено:
+  - Внутри `docker build` в облачной сессии нет сети: зеркала Debian блокирует прокси сессии, разрешены только зеркала Ubuntu. Production Dockerfile не менял: в GitHub Actions `apt-get install openssl` работает. Для локальной проверки собрал только в сессии вспомогательный базовый образ: OpenSSL 3.0 из пакета Ubuntu 22.04 (glibc совместима с bookworm), CA прокси, заглушка `apt-get`. Подставлял его через build-arg `NODE_IMAGE`. Сначала пробовал библиотеки OpenSSL с хоста, но они собраны под glibc 2.38 и в bookworm не загрузились.
+  - В slim-образе нет OpenSSL, а нативному schema-engine Prisma он нужен. Поэтому `apt-get install openssl` в Dockerfile оставлен.
+  - Скомпилированный сброс сначала падал: пакет `server-only` без условия `react-server` бросает ошибку. Запуск сделан через `node --conditions=react-server`, как в `npm run demo:reset`.
+  - Образ tools сначала весил 911 МБ. Удалил из него лишнее: пакеты веб-приложения, Playwright и TypeScript (приходят как peer-зависимости), sharp, PGlite. Первая попытка удалить и Prisma Studio сломала CLI: он грузит `@prisma/studio-core` и `@prisma/dev` при старте. Проверка тоже сначала была ошибочной: в контейнере от пользователя `node` `rm` молча ничего не удалял. Повторил от root, нашёл два нужных пакета и вернул их. Итог: 745 МБ.
+  - При проверке Cache-Control статика сначала отдавала 404 с `no-store`: я скопировал её после запуска standalone-сервера. После перезапуска с правильной раскладкой — `immutable`.
+  - bootstrap.sh: в первой версии под `set -e` падение ufw в контейнере и пустой вывод `ip` прервали бы скрипт. Добавлены явные предупреждения вместо падения. Файл сжат со 133 до 118 строк.
+  - actionlint скачать и запустить не дала политика сессии. Вместо него workflow проверены парсером YAML, shellcheck по каждому шагу `run` и проверкой закрепления `uses:` по SHA.
+- Проверки:
+  - `npm run typecheck`, `npm run lint`, `npm run format:check`: без ошибок.
+  - `npm run test`: 75 тестов.
+  - Локальный production-стек: см. выше.
+  - shellcheck: `bootstrap.sh`, `remote-deploy.sh`, `tools-entrypoint.sh`.
+- Субагенты: security-reviewer — см. дополнение ниже.
+- Коммит: PR #11.
+
 ## Инфраструктура
 
 Решение по хостингу (10–11 ноября):
