@@ -72,5 +72,9 @@ test("несуществующая страница: 404 на русском и 
 test("/api/health отвечает db ok", async ({ request }) => {
   const response = await request.get("/api/health");
   expect(response.status()).toBe(200);
-  expect(await response.json()).toEqual({ status: "ok", db: "ok" });
+  const body = (await response.json()) as Record<string, unknown>;
+  expect(body).toMatchObject({ status: "ok", db: "ok" });
+  // Только версия сборки и время последнего сброса, больше никаких сведений о системе.
+  expect(Object.keys(body).sort()).toEqual(["db", "demoResetAt", "status", "version"]);
+  expect(String(body.demoResetAt)).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00$/);
 });
