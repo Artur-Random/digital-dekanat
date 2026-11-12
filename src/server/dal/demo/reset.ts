@@ -454,6 +454,8 @@ export async function resetDemoData(options: ResetOptions = {}): Promise<ResetSu
     async (tx) => {
       await wipe(tx);
       for (const block of blocks) await block(tx, ctx);
+      // Отметка успешного сброса для /api/health и мониторинга (uptime.yml).
+      await tx.demoReset.create({ data: {} });
     },
     { timeout: 60_000 },
   );

@@ -50,3 +50,9 @@ export function dateOnly(key: DateKey): Date {
   assertDateKey(key);
   return new Date(`${key}T00:00:00Z`);
 }
+
+/** Момент времени по Москве в ISO-формате со смещением: «2026-11-12T04:00:05+03:00». */
+export function formatMoscowIso(date: Date): string {
+  const shifted = new Date(date.getTime() + 3 * 60 * 60 * 1000);
+  return `${shifted.toISOString().slice(0, 19)}${MOSCOW_OFFSET}`;
+}

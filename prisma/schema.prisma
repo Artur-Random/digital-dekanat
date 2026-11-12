@@ -525,3 +525,12 @@ model Notification {
 
   @@index([recipientId, isRead, createdAt])
 }
+
+/// Журнал успешных сбросов демо-данных: /api/health отдаёт время последнего.
+/// Сброс эту таблицу не очищает.
+model DemoReset {
+  id         String   @id @default(cuid())
+  finishedAt DateTime @default(now())
+
+  @@index([finishedAt])
+}
