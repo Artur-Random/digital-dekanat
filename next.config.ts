@@ -6,6 +6,8 @@ const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Для production-образа: только трассированные зависимости, без полного node_modules.
+  output: "standalone",
   // Значок dev-режима попадает в автоскриншоты, он не нужен.
   devIndicators: false,
   // Иначе next dev сам пишет AGENTS.md с инструкциями для ИИ-агентов. Главный документ
