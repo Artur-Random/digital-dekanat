@@ -1,0 +1,76 @@
+# Reusable checks: typecheck, lint, unit tests, e2e on a production build with PostgreSQL.
+# Called by ci.yml and deploy.yml, so both run the same set without copying.
+name: checks
+
+on:
+  workflow_call: {}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_USER: dekanat
+          POSTGRES_DB: dekanat
+          # Throwaway database of this run, reachable only from the runner: no password needed.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dekanat -d dekanat"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://dekanat@localhost:5432/dekanat?schema=public
+      NEXT_TELEMETRY_DISABLED: "1"
+      CHECKPOINT_DISABLE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Demo passwords live only in this run: random, masked, never stored anywhere.
+      - name: Generate demo passwords for this run
+        run: |
+          for name in ALINA DENIS MFC DEKANAT; do
+            value="$(openssl rand -hex 12)"
+            echo "::add-mask::$value"
+            echo "DEMO_PASSWORD_$name=$value" >> "$GITHUB_ENV"
+          done
+
+      - run: npm ci --no-audit --no-fund
+      - run: npx prisma migrate deploy
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run test
+      - run: npm run demo:reset
+      - run: npm run build
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Start production server
+        run: |
+          npm run start -- -p 3000 > "$RUNNER_TEMP/next.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS -o /dev/null http://localhost:3000/login && exit 0
+            sleep 1
+          done
+          echo "server did not start"; tail -n 50 "$RUNNER_TEMP/next.log"; exit 1
+
+      - name: E2E on the production build
+        env:
+          BASE_URL: http://localhost:3000
+          E2E_PRODUCTION: "1"
+        run: npm run test:e2e
