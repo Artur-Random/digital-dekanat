@@ -9,11 +9,10 @@ import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { applicationStatusNotice, retakeScheduleNotice } from "@/server/rules/notices";
 import { isRetake, scheduleLink } from "@/server/rules/schedule";
 import { ScheduleDomainError } from "@/server/rules/schedule-change";
-
-import { loadEventInTx } from "./schedule";
 import { toDateKey } from "@/lib/moscow-date";
 
 import { type DbTx, inTransaction } from "./client";
+import { loadEventInTx } from "./schedule";
 import { requireDekanat } from "./staff-unit";
 
 // Получатель — всегда пользователь из сессии (actor.userId). Чужое и несуществующее уведомление
@@ -107,8 +106,16 @@ export async function notifyRetakeSchedulePublished(
       throw new ScheduleDomainError("NOT_FOUND", "Пересдача не найдена.");
     }
     const e = event.input;
+    // Текст правила для уровня образования владельца пересдачи.
+    const owner = await tx.studentProfile.findFirst({
+      where: { userId: event.studentUserId },
+      select: { levelId: true },
+    });
     const locked = await tx.rule.findFirst({
-      where: { trigger: "RETAKE_SCHEDULE_LOCKED" },
+      where: {
+        trigger: "RETAKE_SCHEDULE_LOCKED",
+        levels: { some: { id: owner?.levelId ?? "" } },
+      },
       select: { body: true, normCodes: true },
     });
     const notice = retakeScheduleNotice(

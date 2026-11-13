@@ -4,7 +4,7 @@
 
 import type { ControlForm, GradeValue } from "@/generated/prisma/enums";
 import { type DateKey, toDateKey } from "@/lib/moscow-date";
-import { formatDateKeyWithYear } from "@/lib/format-date";
+import { formatDateKeySmart } from "@/lib/format-date";
 
 import { type DebtTimeline, addCalendarYear } from "./debts";
 import { type RuleText, renderRule } from "./rule-text";
@@ -31,6 +31,8 @@ export type WhatIfInput = {
   /** Задолженность и её расчёт (debtTimeline). */
   debt: { formedAt: DateKey; afterAnnualSession: boolean; timeline: DebtTimeline } | null;
   rules: readonly RuleText[];
+  /** Обычная стипендия уже прекращена (stipendStatus): сценарий «удовлетворительно» не нужен. */
+  stipendStopped: boolean;
 };
 
 /** Срок «Не смогу прийти»: 3 рабочих дня ПОСЛЕ даты контроля (N-04, N-16). */
@@ -40,7 +42,8 @@ const DAYS_TO_NOTIFY = ABSENCE_NOTICE_WORKING_DAYS;
 
 export function whatIfScenarios(input: WhatIfInput): Scenario[] {
   const eligible = isStipendEligible(input.student);
-  const date = (key: DateKey) => formatDateKeyWithYear(key);
+  const today = toDateKey(input.now);
+  const date = (key: DateKey) => formatDateKeySmart(key, today);
 
   function item(trigger: string, vars: Record<string, string> = {}): ScenarioItem[] {
     const rule = input.rules.find((r) => r.trigger === trigger);
@@ -66,6 +69,7 @@ export function whatIfScenarios(input: WhatIfInput): Scenario[] {
               attempt: String(timeline.nextAttempt ?? 2),
             })
           : item("DEBT_STAGE_2")),
+        ...(retake ? [] : item("RETAKE_SCHEDULE_PUBLISH")),
         ...item("STIPEND_STOPPED", {
           stopDate: date(firstOfNextMonth(formedAt)),
           reason: "академическая задолженность",
@@ -115,11 +119,15 @@ export function whatIfScenarios(input: WhatIfInput): Scenario[] {
   if (!a || a.grade !== null) return scenarios;
   const controlDay = toDateKey(a.date);
   // У зачёта нет оценки «удовлетворительно» (N-03): сценарий только для экзамена и дифзачёта.
+  // О возобновлении выплаты нормы в реестре нет: если стипендия уже прекращена, говорим только
+  // о требовании к назначению (N-20), а не о повторном прекращении (N-21).
   if (a.controlForm !== "CREDIT") {
     push({
       id: "satisfactory",
       title: "Если получу «удовлетворительно»",
-      items: item("GRADE_SATISFACTORY", { stopDate: date(firstOfNextMonth(controlDay)) }),
+      items: input.stipendStopped
+        ? item("GRADE_SATISFACTORY_ASSIGNMENT")
+        : item("GRADE_SATISFACTORY", { stopDate: date(firstOfNextMonth(controlDay)) }),
       actions: [],
     });
   }

@@ -2,6 +2,8 @@
 
 export type RuleText = {
   trigger: string;
+  /** Короткое название: подписи шагов шкалы задолженности. */
+  title: string;
   body: string;
   normCodes: string[];
   stipendOnly: boolean;

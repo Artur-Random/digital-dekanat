@@ -8,7 +8,7 @@ import type {
   StudyForm,
 } from "@/generated/prisma/enums";
 import { type DateKey, addDays, moscowTime, toDateKey } from "@/lib/moscow-date";
-import { formatDateKey, formatDateKeyWithYear, formatSlot, pluralDays } from "@/lib/format-date";
+import { formatDateKey, formatDateKeySmart, formatSlot, pluralDays } from "@/lib/format-date";
 
 import type { StageBranch } from "./application-stages";
 import { statusTitle } from "./application-stages";
@@ -232,12 +232,12 @@ function debtItems(now: Date, ctx: ActionFeedContext): ActionItem[] {
   const today = toDateKey(now);
   return ctx.debts.map((d) => ({
     kind: "debt" as const,
-    title: `Задолженность по дисциплине «${d.discipline}»: ликвидировать до ${formatDateKeyWithYear(d.deadline)}`,
-    details: d.stage === "STAGE_1" ? "Этап I: первая пересдача" : "Этап II: пересдача с комиссией",
+    title: `Задолженность по дисциплине «${d.discipline}»: ликвидировать до ${formatDateKeySmart(d.deadline, today)}`,
+    details: d.stage === "STAGE_1" ? "Этап I" : "Этап II (комиссия)",
     dueAt: { kind: "date" as const, date: d.deadline },
     urgency: urgencyFor(d.deadline, today, ctx.calendar),
     href: `/study/${d.assessmentId}`,
-    normCodes: ["N-10"],
+    normCodes: ["N-10", "N-17"],
     prototypeAssumption: false,
   }));
 }

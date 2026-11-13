@@ -5,12 +5,14 @@ import { notFound } from "next/navigation";
 import { BackButton } from "@/components/BackButton";
 import { NormQuotes } from "@/components/NormQuote";
 import { RuleText } from "@/components/RuleText";
-import { formatDateKeyWithYear, formatDayTime } from "@/lib/format-date";
+import { formatDateKeySmart, formatDayTime } from "@/lib/format-date";
+import { toDateKey } from "@/lib/moscow-date";
 import { requireStudent } from "@/server/auth/guards";
 import { listNorms } from "@/server/dal/norms";
-import { getDisciplineView } from "@/server/dal/study";
+import { getDisciplineView, getStipendContext } from "@/server/dal/study";
 import { debtTimeline } from "@/server/rules/debts";
 import { CONTROL_FORM_LABEL, GRADE_LABEL, gradeFor } from "@/server/rules/grades";
+import { stipendStatus } from "@/server/rules/stipend";
 import { whatIfScenarios } from "@/server/rules/what-if";
 
 export const metadata: Metadata = { title: "Дисциплина" };
@@ -23,9 +25,13 @@ export default async function DisciplinePage({ params }: Props) {
   const { id } = await params;
   const view = await getDisciplineView(actor, id);
   if (!view) notFound();
+  const stipendCtx = await getStipendContext(actor);
 
   const now = new Date();
   const { assessment: a } = view;
+  const stipend = stipendCtx
+    ? stipendStatus(stipendCtx.student, stipendCtx.assessments, stipendCtx.debts, now)
+    : null;
   const result =
     a.score === null ? null : gradeFor(a.score, a.controlForm, actor.levelCode, view.bands);
   const timeline = view.debt
@@ -51,11 +57,16 @@ export default async function DisciplinePage({ params }: Props) {
           }
         : null,
     rules: view.rules,
+    stipendStopped: stipend !== null && !stipend.paid,
   });
   const timelineCodes = timeline ? ["N-09", "N-10", "N-17", "N-52"] : [];
+  const resultCodes = result ? ["N-02", "N-03", ...(result.isPositive ? [] : ["N-08"])] : [];
+  const today = toDateKey(now);
+  const ruleTitle = (trigger: string) => view.rules.find((r) => r.trigger === trigger)?.title ?? "";
   const codes = [
     ...new Set([
       ...timelineCodes,
+      ...resultCodes,
       ...scenarios.flatMap((s) => s.items.flatMap((i) => i.normCodes)),
     ]),
   ];
@@ -85,9 +96,7 @@ export default async function DisciplinePage({ params }: Props) {
           </>
         )}
       </dl>
-      {result ? (
-        <NormQuotes codes={["N-02", "N-03"].filter((c) => norms.has(c))} norms={norms} />
-      ) : null}
+      {result ? <NormQuotes codes={resultCodes} norms={norms} /> : null}
 
       {timeline ? (
         <section aria-labelledby="timeline-title" className="mt-6" data-testid="debt-timeline">
@@ -95,22 +104,24 @@ export default async function DisciplinePage({ params }: Props) {
             Шкала задолженности
           </h2>
           <ol className="mt-3 grid gap-2 sm:grid-cols-3">
+            {/* Названия шагов — заголовки правил из таблицы Rule; даты — факты студента. */}
             {[
               {
                 key: "STAGE_1",
-                title: "Этап I",
+                title: ruleTitle("DEBT_STAGE_1"),
                 detail: timeline.nextRetake
-                  ? `Пересдача ${formatDayTime(timeline.nextRetake.startsAt)}`
-                  : "Дата пересдачи появится в расписании",
+                  ? `Пересдача: ${formatDayTime(timeline.nextRetake.startsAt)}`
+                  : null,
               },
-              { key: "STAGE_2", title: "Этап II (комиссия)", detail: "Вторая пересдача" },
+              { key: "STAGE_2", title: ruleTitle("DEBT_STAGE_2"), detail: null },
               {
                 key: "EXPULSION",
-                title: "Отчисление",
-                detail: `Если не ликвидировать до ${formatDateKeyWithYear(timeline.deadline)}`,
+                title: ruleTitle("DEBT_NOT_LIQUIDATED"),
+                detail: `Крайний срок: ${formatDateKeySmart(timeline.deadline, today)}`,
               },
-            ].map((step) => {
+            ].map((step, index, steps) => {
               const current = step.key === timeline.stage;
+              const passed = index < steps.findIndex((s) => s.key === timeline.stage);
               return (
                 <li
                   key={step.key}
@@ -121,8 +132,9 @@ export default async function DisciplinePage({ params }: Props) {
                   <p className="font-semibold">
                     {step.title}
                     {current ? <span className="text-accent"> · сейчас</span> : null}
+                    {passed ? <span className="text-ink-muted"> · пройден</span> : null}
                   </p>
-                  <p className="text-ink-muted text-sm">{step.detail}</p>
+                  {step.detail ? <p className="text-ink-muted text-sm">{step.detail}</p> : null}
                 </li>
               );
             })}
@@ -133,7 +145,7 @@ export default async function DisciplinePage({ params }: Props) {
               {timeline.nextAttempt ? `${timeline.nextAttempt} из 2` : "попыток не осталось"}
             </dd>
             <dt className="text-ink-muted">Крайний срок</dt>
-            <dd data-testid="deadline">{formatDateKeyWithYear(timeline.deadline)}</dd>
+            <dd data-testid="deadline">{formatDateKeySmart(timeline.deadline, today)}</dd>
             {timeline.nextRetake ? (
               <>
                 <dt className="text-ink-muted">Пересдача</dt>

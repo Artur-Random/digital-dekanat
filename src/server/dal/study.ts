@@ -48,7 +48,7 @@ async function bandsFor(actor: StudentActor): Promise<GradeBandInput[]> {
 export async function getRulesForStudent(actor: StudentActor): Promise<RuleText[]> {
   const rows = await getDb().rule.findMany({
     where: { levels: { some: { code: actor.levelCode } } },
-    select: { trigger: true, body: true, normCodes: true, stipendOnly: true },
+    select: { trigger: true, title: true, body: true, normCodes: true, stipendOnly: true },
   });
   return rows;
 }
@@ -114,14 +114,21 @@ export async function getStipendContext(actor: StudentActor) {
       where: { studentId: actor.studentId },
       select: { semester: true, grade: true, date: true },
     }),
-    getDebts(actor),
+    // Все задолженности, в том числе ликвидированные: для даты прекращения выплаты (N-21).
+    getDb().academicDebt.findMany({
+      where: { studentId: actor.studentId },
+      select: { formedAt: true, status: true },
+    }),
     getRulesForStudent(actor),
   ]);
   if (!profile) return null;
   return {
     student: { studyForm: profile.studyForm, funding: profile.funding },
     assessments,
-    debts: debts.map((d) => ({ formedAt: d.formedAt, open: true })),
+    debts: debts.map((d) => ({
+      formedAt: d.formedAt.toISOString().slice(0, 10),
+      open: d.status === "OPEN",
+    })),
     rules,
   };
 }
@@ -180,7 +187,7 @@ export async function getDisciplineView(actor: StudentActor, id: string) {
           formedAt: debt.formedAt.toISOString().slice(0, 10),
           stage: debt.stage,
           deadline: debt.deadline.toISOString().slice(0, 10),
-          // Летняя сессия завершает учебный год (N-11).
+          // Допущение прототипа: «итоги учебного года» (N-11) — летняя сессия, июнь–июль.
           afterAnnualSession: ["06", "07"].includes(toDateKey(assessment.date).slice(5, 7)),
         }
       : null,

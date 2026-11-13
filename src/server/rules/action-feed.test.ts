@@ -155,7 +155,7 @@ describe("лента «Нужно сделать»", () => {
     expect(feed[0]).toMatchObject({
       kind: "debt",
       title: "Задолженность по дисциплине «Анатомия»: ликвидировать до 15 июня 2027",
-      normCodes: ["N-10"],
+      normCodes: ["N-10", "N-17"],
       href: "/study/as1",
       urgency: "later",
     });

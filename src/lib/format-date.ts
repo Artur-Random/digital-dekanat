@@ -86,3 +86,8 @@ const dayMonthYearUtc = new Intl.DateTimeFormat("ru-RU", {
 export function formatDateKeyWithYear(key: string): string {
   return dayMonthYearUtc.format(new Date(`${key}T12:00:00Z`)).replace(/\s*г\.$/, "");
 }
+
+/** «18 ноября» в текущем году, «15 июня 2027» — в другом (формат CLAUDE.md, год только по делу). */
+export function formatDateKeySmart(key: string, today: string): string {
+  return key.slice(0, 4) === today.slice(0, 4) ? formatDateKey(key) : formatDateKeyWithYear(key);
+}

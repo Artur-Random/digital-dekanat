@@ -3,7 +3,8 @@
 
 import { expect, test } from "@playwright/test";
 
-import { formatDateKeyWithYear, formatDayTime } from "../src/lib/format-date";
+import { formatDateKeySmart, formatDayTime } from "../src/lib/format-date";
+import { todayInMoscow } from "../src/lib/moscow-date";
 import { firstOfNextMonth } from "../src/server/rules/stipend";
 
 import { loginAs } from "./auth";
@@ -19,9 +20,11 @@ test("alina: /study показывает задолженность и прек�
   await page.goto("/study");
   const summary = page.getByTestId("debts-summary");
   await expect(summary).toContainText("Академических задолженностей: 1");
-  await expect(summary).toContainText(`ликвидировать до ${formatDateKeyWithYear(debt.deadline)}`);
+  await expect(summary).toContainText(
+    `ликвидировать до ${formatDateKeySmart(debt.deadline, todayInMoscow())}`,
+  );
   await expect(page.getByTestId("stipend-status")).toContainText(
-    `не выплачивается с ${formatDateKeyWithYear(firstOfNextMonth(debt.formedAt))}`,
+    `не выплачивается с ${formatDateKeySmart(firstOfNextMonth(debt.formedAt), todayInMoscow())}`,
   );
   await expect(page.getByTestId("raised-window")).toBeVisible();
   // По умолчанию последний семестр с результатами; задолженность выделена текстом.
@@ -36,7 +39,9 @@ test("alina: S3a задолженности — этап I, попытка, ср
   await page.goto(`/study/${debt.assessmentId}`);
   await expect(page.locator('[data-step="STAGE_1"]')).toHaveAttribute("aria-current", "step");
   await expect(page.getByTestId("attempt")).toHaveText("1 из 2");
-  await expect(page.getByTestId("deadline")).toHaveText(formatDateKeyWithYear(debt.deadline));
+  await expect(page.getByTestId("deadline")).toHaveText(
+    formatDateKeySmart(debt.deadline, todayInMoscow()),
+  );
   await expect(page.getByTestId("retake-date")).toHaveText(formatDayTime(debt.retakeAt));
 
   const quote = page
@@ -67,7 +72,7 @@ test("alina: дисциплина текущего семестра — сцен
     .getByTestId("scenario")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-scenario")));
   expect(ids).toEqual(["satisfactory", "no-show", "valid-reason"]);
-  await expect(page.locator('[data-scenario="satisfactory"]')).toContainText("стипендия");
+  await expect(page.locator('[data-scenario="satisfactory"]')).toContainText("стипенди");
 });
 
 test("denis: /study без стипендии и сценариев о ней, пустое состояние с датами зачётов", async ({

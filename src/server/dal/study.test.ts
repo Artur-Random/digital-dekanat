@@ -75,12 +75,12 @@ describe("сид учёбы", () => {
     );
   });
 
-  it("правила: 14 триггеров, у каждого три уровня, verified=false", async () => {
+  it("правила: 16 триггеров, у каждого три уровня, verified=false", async () => {
     const rules = await getDb().rule.findMany({
       select: { trigger: true, verified: true, _count: { select: { levels: true } } },
     });
-    expect(rules).toHaveLength(14);
-    expect(new Set(rules.map((r) => r.trigger)).size).toBe(14);
+    expect(rules).toHaveLength(16);
+    expect(new Set(rules.map((r) => r.trigger)).size).toBe(16);
     expect(rules.every((r) => r._count.levels === 3 && !r.verified)).toBe(true);
   });
 

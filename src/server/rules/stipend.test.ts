@@ -41,6 +41,30 @@ describe("stipendStatus (N-20, N-21, N-22, N-29)", () => {
     expect(s).toMatchObject({ paid: true, stoppedFrom: null });
   });
 
+  it("первый зачёт новой сессии не отменяет прекращение по прошлой (N-21)", () => {
+    const s = stipendStatus(
+      budget,
+      [
+        { semester: 2, grade: "SATISFACTORY", date: moscowDateTime("2026-06-10", "10:00") },
+        { semester: 3, grade: "PASSED", date: moscowDateTime("2026-12-28", "10:00") },
+        { semester: 3, grade: null, date: moscowDateTime("2027-01-12", "10:00") },
+      ],
+      [],
+      moscowDateTime("2026-12-29", "12:00"),
+    );
+    expect(s).toMatchObject({ paid: false, stoppedFrom: "2026-07-01", reason: "satisfactory" });
+  });
+
+  it("ликвидированная задолженность прошлой сессии всё равно дала прекращение", () => {
+    const s = stipendStatus(
+      budget,
+      [{ semester: 2, grade: "UNSATISFACTORY", date: moscowDateTime("2026-06-15", "10:00") }],
+      [{ formedAt: "2026-06-15", open: false }],
+      now,
+    );
+    expect(s?.paid).toBe(false);
+  });
+
   it("контрактник и заочник — null (N-22)", () => {
     expect(stipendStatus({ studyForm: "FULL_TIME", funding: "CONTRACT" }, [], [], now)).toBeNull();
     expect(stipendStatus({ studyForm: "EXTRAMURAL", funding: "BUDGET" }, [], [], now)).toBeNull();

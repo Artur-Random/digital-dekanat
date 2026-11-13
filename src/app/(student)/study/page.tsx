@@ -7,7 +7,7 @@ import { z } from "zod";
 import { NormQuotes } from "@/components/NormQuote";
 import { RuleText } from "@/components/RuleText";
 import { SectionSkeleton } from "@/components/SectionSkeleton";
-import { formatDateKeyWithYear, formatDayTime } from "@/lib/format-date";
+import { formatDateKeySmart, formatDayTime } from "@/lib/format-date";
 import { monthPrepositional } from "@/lib/months";
 import { toDateKey } from "@/lib/moscow-date";
 import { type StudentActor, requireStudent } from "@/server/auth/guards";
@@ -63,7 +63,9 @@ export default async function StudyPage({ searchParams }: Props) {
                   href={`/study?semester=${s.semester}`}
                   aria-current={s.semester === selected ? "page" : undefined}
                   className={`inline-flex min-h-11 items-center rounded-md px-4 font-medium ${
-                    s.semester === selected ? "bg-accent text-accent-ink" : "border-border border"
+                    s.semester === selected
+                      ? "bg-accent text-accent-ink"
+                      : "border-ink-muted border"
                   }`}
                 >
                   {s.semester} семестр
@@ -117,7 +119,7 @@ async function Summary({ actor }: { actor: StudentActor }) {
                 className="text-accent mt-1 flex min-h-11 items-center gap-1 underline"
               >
                 {nearest.discipline.name}: ликвидировать до{" "}
-                {formatDateKeyWithYear(nearest.deadline)}
+                {formatDateKeySmart(nearest.deadline, toDateKey(now))}
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
               </Link>
             ) : null}
@@ -132,7 +134,9 @@ async function Summary({ actor }: { actor: StudentActor }) {
             <RuleText
               testId="stipend-status"
               text={renderRule(stipendRule.body, {
-                stopDate: status.stoppedFrom ? formatDateKeyWithYear(status.stoppedFrom) : "",
+                stopDate: status.stoppedFrom
+                  ? formatDateKeySmart(status.stoppedFrom, toDateKey(now))
+                  : "",
                 reason:
                   status.reason === "debt"
                     ? "академическая задолженность"
@@ -147,8 +151,8 @@ async function Summary({ actor }: { actor: StudentActor }) {
               <RuleText
                 testId="raised-window"
                 text={renderRule(windowRule.body, {
-                  opens: formatDateKeyWithYear(status.raisedWindow.opens),
-                  closes: formatDateKeyWithYear(status.raisedWindow.closes),
+                  opens: formatDateKeySmart(status.raisedWindow.opens, toDateKey(now)),
+                  closes: formatDateKeySmart(status.raisedWindow.closes, toDateKey(now)),
                 })}
                 normCodes={windowRule.normCodes}
                 norms={norms}

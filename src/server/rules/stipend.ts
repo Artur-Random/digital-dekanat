@@ -1,4 +1,5 @@
-// Обычная академическая стипендия (только очная форма и бюджет, N-22).
+// Обычная академическая стипендия. Показывается только очной форме и бюджету: для повышенной
+// это N-22, для обычной в реестре — пометка «только для бюджетной основы» у N-20.
 // N-20: нет «удовлетворительно» по итогам последней аттестации и нет задолженностей.
 // N-21: выплата прекращается с 1-го числа месяца после месяца, когда получена тройка
 // или образовалась задолженность. N-29: окна подачи документов на повышенную стипендию.
@@ -56,14 +57,27 @@ export function stipendStatus(
 ): StipendStatus | null {
   if (!isStipendEligible(student)) return null;
   const today = toDateKey(now);
-  const withResults = assessments.filter((a) => a.grade !== null && toDateKey(a.date) <= today);
-  const lastSemester = Math.max(0, ...withResults.map((a) => a.semester));
-  // Поводы прекращения по итогам последней аттестации: тройки и открытые задолженности.
+  // Последняя завершённая аттестация: семестр, где у всех дисциплин уже есть результат.
+  // Первый зачёт следующей сессии не «обнуляет» итоги прошлой (N-21: прекращение с даты).
+  const bySemester = new Map<number, StipendAssessment[]>();
+  for (const a of assessments)
+    bySemester.set(a.semester, [...(bySemester.get(a.semester) ?? []), a]);
+  const complete = [...bySemester]
+    .filter(([, list]) => list.every((a) => a.grade !== null && toDateKey(a.date) <= today))
+    .map(([semester]) => semester);
+  const lastSemester = Math.max(0, ...complete);
+  const lastSession = bySemester.get(lastSemester) ?? [];
+  const sessionStart = lastSession.map((a) => toDateKey(a.date)).sort()[0] ?? today;
+  // Поводы прекращения: тройки последней аттестации, открытые задолженности и задолженности,
+  // образованные в эту аттестацию (даже если уже ликвидированы: о возобновлении выплаты
+  // в реестре нормы нет).
   const events: { date: DateKey; reason: "debt" | "satisfactory" }[] = [
-    ...withResults
-      .filter((a) => a.semester === lastSemester && a.grade === "SATISFACTORY")
+    ...lastSession
+      .filter((a) => a.grade === "SATISFACTORY")
       .map((a) => ({ date: toDateKey(a.date), reason: "satisfactory" as const })),
-    ...debts.filter((d) => d.open).map((d) => ({ date: d.formedAt, reason: "debt" as const })),
+    ...debts
+      .filter((d) => d.open || d.formedAt >= sessionStart)
+      .map((d) => ({ date: d.formedAt, reason: "debt" as const })),
   ].sort((a, b) => a.date.localeCompare(b.date));
   const first = events[0];
   return {
