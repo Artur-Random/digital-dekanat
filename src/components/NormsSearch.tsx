@@ -6,8 +6,14 @@ import { useMemo, useState } from "react";
 import type { NormView } from "@/server/dal/norms";
 
 /** Поиск по нормам на клиенте: норм мало (около 40), сервер для этого не нужен. */
-export function NormsSearch({ norms }: { norms: NormView[] }) {
-  const [query, setQuery] = useState("");
+export function NormsSearch({
+  norms,
+  initialQuery = "",
+}: {
+  norms: NormView[];
+  initialQuery?: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
   const found = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return norms;

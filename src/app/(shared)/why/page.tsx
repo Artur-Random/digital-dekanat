@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { z } from "zod";
 
 import { BackButton } from "@/components/BackButton";
 import { NormsSearch } from "@/components/NormsSearch";
@@ -8,8 +9,14 @@ import { listNorms } from "@/server/dal/norms";
 export const metadata: Metadata = { title: "Почему так" };
 
 // S8: все нормы реестра с якорями #N-xx, поиск и «Где используется».
-export default async function WhyPage() {
+type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+// Начальный запрос поиска из адреса (?q=): ссылка на найденное и скриншот экрана с поиском.
+const queryParam = z.string().max(100);
+
+export default async function WhyPage({ searchParams }: Props) {
   const user = await requireUser();
+  const q = queryParam.safeParse((await searchParams).q);
   const norms = await listNorms(user);
   return (
     <>
@@ -21,7 +28,7 @@ export default async function WhyPage() {
       {norms.length === 0 ? (
         <p className="text-ink-muted mt-4">Реестр норм пока пуст.</p>
       ) : (
-        <NormsSearch norms={norms} />
+        <NormsSearch norms={norms} initialQuery={q.success ? q.data : ""} />
       )}
     </>
   );

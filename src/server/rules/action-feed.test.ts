@@ -142,27 +142,26 @@ describe("лента «Нужно сделать»", () => {
     expect(buildActionFeed(now, ctx({ events: [far] }))).toEqual([]);
   });
 
-  describe("окно повышенной стипендии (N-29, только очная форма и бюджет по N-22)", () => {
-    const jan = at("2027-01-20", "12:00");
-    const feb = at("2027-02-15", "12:00");
-
-    it("у бюджетника очной формы: «откроется» за 30 дней и «открыто» внутри окна", () => {
-      const upcoming = buildActionFeed(jan, ctx());
-      expect(upcoming).toHaveLength(1);
-      expect(upcoming[0]?.kind).toBe("scholarship-window");
-      expect(upcoming[0]?.title).toContain("откроется 5 февраля");
-      expect(upcoming[0]?.normCodes).toEqual(["N-29", "N-22"]);
-
-      const open = buildActionFeed(feb, ctx());
-      expect(open[0]?.title).toBe("Открыт приём документов на повышенную стипендию");
-      expect(open[0]?.details).toContain("5 марта");
+  it("задолженность появляется в ленте со сроком по N-10 и ссылкой на S3a", () => {
+    const feed = buildActionFeed(
+      now,
+      ctx({
+        debts: [
+          { assessmentId: "as1", discipline: "Анатомия", stage: "STAGE_1", deadline: "2027-06-15" },
+        ],
+      }),
+    );
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({
+      kind: "debt",
+      title: "Задолженность по дисциплине «Анатомия»: ликвидировать до 15 июня 2027",
+      normCodes: ["N-10"],
+      href: "/study/as1",
+      urgency: "later",
     });
+  });
 
-    it("у контрактника окна нет; в ноябре окно дальше 30 дней и не показывается", () => {
-      const contract = ctx({ student: { studyForm: "FULL_TIME", funding: "CONTRACT" } });
-      expect(buildActionFeed(feb, contract)).toEqual([]);
-      expect(buildActionFeed(jan, contract)).toEqual([]);
-      expect(buildActionFeed(at("2026-11-22", "12:00"), ctx())).toEqual([]);
-    });
+  it("окна повышенной стипендии в ленте нет (оно в S3)", () => {
+    expect(buildActionFeed(moscowDateTime("2027-02-15", "12:00"), ctx())).toEqual([]);
   });
 });

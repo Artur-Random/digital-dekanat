@@ -23,6 +23,7 @@ import {
 } from "@/server/rules/working-days";
 
 import { APPLICATION_TYPES, type ApplicationTypeSeed } from "./application-types";
+import { GRADE_BANDS } from "./grade-bands";
 import { HOLIDAYS } from "./holidays";
 import { RULES } from "./rules";
 import { seedSchedule } from "./schedule";
@@ -135,45 +136,19 @@ async function seedReferenceData(tx: Tx, ctx: SeedContext): Promise<void> {
 
 /** Шкала оценок строго по N-03 для уровней с заполненными правилами. */
 async function seedGradeBands(tx: Tx, ctx: SeedContext): Promise<void> {
-  const graded = [
-    { grade: "UNSATISFACTORY", min: 0, max: 50, positive: false },
-    { grade: "SATISFACTORY", min: 51, max: 65, positive: true },
-    { grade: "GOOD", min: 66, max: 80, positive: true },
-    { grade: "EXCELLENT", min: 81, max: 100, positive: true },
-  ] as const;
-  const credit = [
-    { grade: "FAILED", min: 0, max: 50, positive: false },
-    { grade: "PASSED", min: 51, max: 100, positive: true },
-  ] as const;
-  const rows: Prisma.GradeBandCreateManyInput[] = [];
-  for (const level of EDUCATION_LEVELS.filter((l) => l.rulesFilled)) {
-    const levelId = ctx.ids.levels.get(level.code);
-    if (!levelId) throw new Error(`Нет уровня ${level.code}`);
-    for (const controlForm of ["EXAM", "DIFF_CREDIT"] as const) {
-      for (const b of graded) {
-        rows.push({
-          levelId,
-          controlForm,
-          grade: b.grade,
-          minScore: b.min,
-          maxScore: b.max,
-          isPositive: b.positive,
-          normCode: "N-03",
-        });
-      }
-    }
-    for (const b of credit) {
-      rows.push({
-        levelId,
-        controlForm: "CREDIT",
-        grade: b.grade,
-        minScore: b.min,
-        maxScore: b.max,
-        isPositive: b.positive,
-        normCode: "N-03",
-      });
-    }
-  }
+  const rows: Prisma.GradeBandCreateManyInput[] = GRADE_BANDS.map((b) => {
+    const levelId = ctx.ids.levels.get(b.levelCode);
+    if (!levelId) throw new Error(`Нет уровня ${b.levelCode}`);
+    return {
+      levelId,
+      controlForm: b.controlForm,
+      grade: b.grade,
+      minScore: b.minScore,
+      maxScore: b.maxScore,
+      isPositive: b.isPositive,
+      normCode: "N-03",
+    };
+  });
   await tx.gradeBand.createMany({ data: rows });
 }
 

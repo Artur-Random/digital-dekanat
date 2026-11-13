@@ -88,3 +88,56 @@ export async function retakeDiscipline(login: string): Promise<string> {
   if (!row) throw new Error(`Нет пересдачи у ${login}`);
   return row.discipline.name;
 }
+
+/** Задолженность демо-студента: id оценки, сроки и пересдача (ожидания для «Учёбы»). */
+export async function debtOf(login: string): Promise<{
+  assessmentId: string;
+  formedAt: string;
+  deadline: string;
+  retakeAt: Date;
+}> {
+  const debt = await db().academicDebt.findFirst({
+    where: { student: { user: { login } }, status: "OPEN" },
+    select: { formedAt: true, deadline: true, disciplineId: true, studentId: true },
+  });
+  if (!debt) throw new Error(`Нет задолженности у ${login}`);
+  const assessment = await db().assessment.findFirst({
+    where: { studentId: debt.studentId, disciplineId: debt.disciplineId, grade: "UNSATISFACTORY" },
+    select: { id: true },
+  });
+  const retake = await db().scheduleEvent.findFirst({
+    where: { studentId: debt.studentId, disciplineId: debt.disciplineId, type: "RETAKE_1" },
+    select: { startsAt: true },
+  });
+  if (!assessment || !retake) throw new Error(`Нет оценки или пересдачи у ${login}`);
+  return {
+    assessmentId: assessment.id,
+    formedAt: debt.formedAt.toISOString().slice(0, 10),
+    deadline: debt.deadline.toISOString().slice(0, 10),
+    retakeAt: retake.startsAt,
+  };
+}
+
+/** Оценка текущего семестра (без результата) по форме контроля. */
+export async function currentAssessmentOf(
+  login: string,
+  controlForm: "EXAM" | "CREDIT" | "DIFF_CREDIT",
+): Promise<{ id: string; discipline: string }> {
+  const row = await db().assessment.findFirst({
+    where: { student: { user: { login } }, score: null, controlForm },
+    orderBy: { date: "asc" },
+    select: { id: true, discipline: { select: { name: true } } },
+  });
+  if (!row) throw new Error(`Нет дисциплины ${controlForm} у ${login}`);
+  return { id: row.id, discipline: row.discipline.name };
+}
+
+/** Даты контроля текущего семестра (зачёты Дениса и т.п.). */
+export async function controlDatesOf(login: string): Promise<Date[]> {
+  const rows = await db().assessment.findMany({
+    where: { student: { user: { login } }, score: null },
+    orderBy: { date: "asc" },
+    select: { date: true },
+  });
+  return rows.map((r) => r.date);
+}
