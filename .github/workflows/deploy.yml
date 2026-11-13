@@ -44,8 +44,10 @@ jobs:
       EVENT: ${{ github.event_name }}
       FORCE: ${{ inputs.force }}
       ROLLBACK_TO: ${{ inputs.rollback_to }}
+      # SSH_USER is not a secret: an environment variable, so the word "deploy" is not masked in logs.
+      SSH_USER: ${{ vars.SSH_USER }}
       # Only a boolean leaves the secrets context here; values are used in single steps below.
-      HAS_SSH: ${{ secrets.SSH_HOST != '' && secrets.SSH_USER != '' && secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_KNOWN_HOSTS != '' }}
+      HAS_SSH: ${{ secrets.SSH_HOST != '' && secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_KNOWN_HOSTS != '' }}
     steps:
       - name: Decide whether to deploy
         id: gate
@@ -60,7 +62,11 @@ jobs:
           fi
           reason=""
           if [ "$HAS_SSH" != "true" ]; then
-            reason="нет секретов SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS (сервер ещё не подготовлен)"
+            reason="нет секретов SSH_HOST, SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS (сервер ещё не подготовлен)"
+          elif ! [[ "$SSH_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+            # Secrets are there, so the server exists: a missing user is a config error, not a skip.
+            echo "::error title=deploy::переменная SSH_USER в окружении production пуста или не имя пользователя Linux"
+            exit 1
           elif [ -z "$SITE_URL" ]; then
             reason="не задана переменная репозитория SITE_URL"
           elif [ "$DEPLOY_FROZEN" = "true" ] && [ "$FORCE" != "true" ]; then
@@ -72,7 +78,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           if [ "$proceed" = "false" ]; then
             echo "### Деплой пропущен: $reason" >> "$GITHUB_STEP_SUMMARY"
-            echo "Деплой пропущен: $reason"
+            echo "::warning title=deploy пропущен::$reason"
           else
             echo "### Деплой: $mode $tag" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -117,7 +123,6 @@ jobs:
         if: steps.gate.outputs.proceed == 'true'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
