@@ -136,14 +136,7 @@ export async function applyScheduleChange(
   const now = options.now ?? new Date();
   return inTransaction(options.tx, async (tx) => {
     await requireDekanat(tx, actor);
-    const event = await tx.scheduleEvent.findUnique({
-      where: { id: input.eventId },
-      select: {
-        ...eventSelect,
-        groupId: true,
-        student: { select: { userId: true } },
-      },
-    });
+    const event = await loadEventInTx(tx, input.eventId);
     if (!event) throw new ScheduleDomainError("NOT_FOUND", "Пара не найдена.");
 
     // Внутри транзакции запросы идут по одному: одно соединение не выполняет их параллельно.
@@ -164,10 +157,8 @@ export async function applyScheduleChange(
       throw new ScheduleDomainError("NOT_FOUND", "Аудитория или преподаватель не найдены.");
     }
 
-    const { events, changes } = toInput([event]);
-    const snapshot = events[0];
-    if (!snapshot) throw new ScheduleDomainError("NOT_FOUND", "Пара не найдена.");
-    const cancelled = changes.some((c) => c.field === "CANCELLED" && c.newValue === "true");
+    const snapshot = event.input;
+    const cancelled = event.changes.some((c) => c.field === "CANCELLED" && c.newValue === "true");
     const plan = planScheduleChange(
       { ...snapshot, cancelled },
       {
@@ -182,13 +173,13 @@ export async function applyScheduleChange(
     );
 
     const updated = await tx.scheduleEvent.update({
-      where: { id: event.id },
+      where: { id: snapshot.id },
       data: plan.update,
       select: { startsAt: true },
     });
     await tx.scheduleChange.createMany({
       data: plan.fields.map((f) => ({
-        eventId: event.id,
+        eventId: snapshot.id,
         field: f.field,
         oldValue: f.oldValue,
         newValue: f.newValue,
@@ -206,11 +197,11 @@ export async function applyScheduleChange(
             select: { userId: true },
           })
         ).map((s) => s.userId)
-      : event.student
-        ? [event.student.userId]
+      : event.studentUserId
+        ? [event.studentUserId]
         : [];
     const notice = scheduleChangeNotice(snapshot, plan.fields, input.reason);
-    const link = scheduleLink(toDateKey(updated.startsAt), event.id);
+    const link = scheduleLink(toDateKey(updated.startsAt), snapshot.id);
     if (recipients.length > 0) {
       await tx.notification.createMany({
         data: recipients.map((recipientId) => ({
@@ -225,4 +216,74 @@ export async function applyScheduleChange(
     }
     return { changeCount: plan.fields.length, notified: recipients.length };
   });
+}
+
+export type EventInTx = {
+  input: ScheduleEventInput;
+  changes: ScheduleChangeInput[];
+  groupId: string | null;
+  studentUserId: string | null;
+};
+
+/**
+ * Событие для записи внутри транзакции: плоскими запросами по одному. Вложенный select со
+ * связями Prisma выполняет параллельными подзапросами, а в транзакции у них одно соединение
+ * (предупреждение pg «client.query() when the client is already executing a query»).
+ */
+export async function loadEventInTx(tx: DbTx, id: string): Promise<EventInTx | null> {
+  const event = await tx.scheduleEvent.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      type: true,
+      startsAt: true,
+      endsAt: true,
+      platform: true,
+      format: true,
+      groupId: true,
+      studentId: true,
+      disciplineId: true,
+      teacherId: true,
+      roomId: true,
+    },
+  });
+  if (!event) return null;
+  const discipline = await tx.discipline.findUniqueOrThrow({
+    where: { id: event.disciplineId },
+    select: { name: true },
+  });
+  const teacher = await tx.teacher.findUniqueOrThrow({
+    where: { id: event.teacherId },
+    select: { fullName: true },
+  });
+  const room = event.roomId
+    ? await tx.room.findUnique({ where: { id: event.roomId }, select: { name: true } })
+    : null;
+  const changes = await tx.scheduleChange.findMany({
+    where: { eventId: id },
+    orderBy: { createdAt: "asc" },
+    select: { field: true, oldValue: true, newValue: true, reason: true, createdAt: true },
+  });
+  const student = event.studentId
+    ? await tx.studentProfile.findUnique({
+        where: { id: event.studentId },
+        select: { userId: true },
+      })
+    : null;
+  return {
+    input: {
+      id: event.id,
+      type: event.type,
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      discipline: discipline.name,
+      teacher: teacher.fullName,
+      room: room?.name ?? null,
+      platform: event.platform,
+      format: event.format,
+    },
+    changes: changes.map((c) => ({ eventId: id, ...c })),
+    groupId: event.groupId,
+    studentUserId: student?.userId ?? null,
+  };
 }

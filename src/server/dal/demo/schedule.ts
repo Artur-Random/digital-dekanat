@@ -247,14 +247,18 @@ export async function seedSchedule(tx: Tx, ctx: SeedContext): Promise<void> {
 
   // «Справка готова» — в момент перехода заявки Алины в статус READY.
   const ready = await tx.application.findFirst({
-    where: { status: "READY", student: { user: { login: "alina" } } },
-    select: { id: true, events: { where: { toStatus: "READY" }, select: { createdAt: true } } },
+    where: { status: "READY", studentId: requireId(ctx.ids.students, "alina", "студента") },
+    select: { id: true },
   });
   if (ready) {
+    const readyEvent = await tx.applicationEvent.findFirst({
+      where: { applicationId: ready.id, toStatus: "READY" },
+      select: { createdAt: true },
+    });
     await notifyStudentAboutApplication(
       mfc,
       ready.id,
-      options(ready.events[0]?.createdAt ?? at(yesterday, "14:30")),
+      options(readyEvent?.createdAt ?? at(yesterday, "14:30")),
     );
   }
 

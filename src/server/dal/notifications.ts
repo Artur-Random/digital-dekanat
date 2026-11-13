@@ -9,6 +9,8 @@ import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { applicationStatusNotice, retakeScheduleNotice } from "@/server/rules/notices";
 import { isRetake, scheduleLink } from "@/server/rules/schedule";
 import { ScheduleDomainError } from "@/server/rules/schedule-change";
+
+import { loadEventInTx } from "./schedule";
 import { toDateKey } from "@/lib/moscow-date";
 
 import { type DbTx, inTransaction } from "./client";
@@ -100,35 +102,21 @@ export async function notifyRetakeSchedulePublished(
 ): Promise<number> {
   return inTransaction(options.tx, async (tx) => {
     await requireDekanat(tx, actor);
-    const event = await tx.scheduleEvent.findUnique({
-      where: { id: eventId },
-      select: {
-        id: true,
-        type: true,
-        startsAt: true,
-        format: true,
-        platform: true,
-        discipline: { select: { name: true } },
-        room: { select: { name: true } },
-        student: { select: { userId: true } },
-      },
-    });
-    if (!event || !isRetake(event.type) || !event.student) {
+    const event = await loadEventInTx(tx, eventId);
+    if (!event || !isRetake(event.input.type) || !event.studentUserId) {
       throw new ScheduleDomainError("NOT_FOUND", "Пересдача не найдена.");
     }
+    const e = event.input;
     const notice = retakeScheduleNotice({
-      discipline: event.discipline.name,
-      startsAt: event.startsAt,
-      stage: event.type === "RETAKE_1" ? "I" : "II",
-      place:
-        event.format === "ONLINE"
-          ? (event.platform ?? "дистанционно")
-          : `ауд. ${event.room?.name ?? "—"}`,
+      discipline: e.discipline,
+      startsAt: e.startsAt,
+      stage: e.type === "RETAKE_1" ? "I" : "II",
+      place: e.format === "ONLINE" ? (e.platform ?? "дистанционно") : `ауд. ${e.room ?? "—"}`,
     });
-    return insert(tx, [event.student.userId], {
+    return insert(tx, [event.studentUserId], {
       type: "RETAKE",
       ...notice,
-      link: scheduleLink(toDateKey(event.startsAt), event.id),
+      link: scheduleLink(toDateKey(e.startsAt), e.id),
       createdAt: options.now,
     });
   });
@@ -141,17 +129,28 @@ export async function notifyApplicationStatus(
   options: WriteOptions = {},
 ): Promise<number> {
   return inTransaction(options.tx, async (tx) => {
-    const app = await tx.application.findFirst({
+    // Плоские запросы по одному: в транзакции одно соединение (см. loadEventInTx).
+    const row = await tx.application.findFirst({
       where: { id: applicationId, unitId: actor.unitId },
-      select: {
-        id: true,
-        status: true,
-        branch: true,
-        unit: { select: { name: true } },
-        type: { select: { code: true, title: true, stages: true } },
-        student: { select: { userId: true } },
-      },
+      select: { id: true, status: true, branch: true, unitId: true, typeId: true, studentId: true },
     });
+    const app = row
+      ? {
+          ...row,
+          unit: await tx.unit.findUniqueOrThrow({
+            where: { id: row.unitId },
+            select: { name: true },
+          }),
+          type: await tx.applicationType.findUniqueOrThrow({
+            where: { id: row.typeId },
+            select: { code: true, title: true, stages: true },
+          }),
+          student: await tx.studentProfile.findUniqueOrThrow({
+            where: { id: row.studentId },
+            select: { userId: true },
+          }),
+        }
+      : null;
     if (!app) throw new ScheduleDomainError("NOT_FOUND", "Заявка не найдена.");
     const notice = applicationStatusNotice({
       typeCode: app.type.code,
