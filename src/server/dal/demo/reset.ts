@@ -3,9 +3,15 @@ import "server-only";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { ApplicationStatus, ApplicationTypeCode, Prisma } from "@/generated/prisma/client";
+import type {
+  ApplicationStatus,
+  ApplicationTypeCode,
+  Prisma,
+  UnitCode,
+} from "@/generated/prisma/client";
 import { type DateKey, dateOnly, moscowDateTime, todayInMoscow } from "@/lib/moscow-date";
 import { parseNormsRegistry } from "@/lib/norms-registry";
+import type { StaffActor } from "@/server/auth/guards";
 import { hashPassword } from "@/server/auth/password";
 import { getDb } from "@/server/db";
 import { nextStageDeadline, stagesSchema } from "@/server/rules/application-stages";
@@ -18,6 +24,7 @@ import {
 
 import { APPLICATION_TYPES, type ApplicationTypeSeed } from "./application-types";
 import { HOLIDAYS } from "./holidays";
+import { seedSchedule } from "./schedule";
 import { EDUCATION_LEVELS, GROUPS, INSTITUTE, STAFF, STUDENTS, UNITS } from "./people";
 
 type Tx = Prisma.TransactionClient;
@@ -35,6 +42,8 @@ export type ResetSummary = Record<string, number>;
 export type SeedContext = {
   today: DateKey;
   calendar: ProductionCalendar;
+  /** Сотрудники как actor для доменных сервисов (изменения расписания, уведомления). */
+  staffActors: Map<UnitCode, StaffActor>;
   ids: {
     levels: Map<string, string>;
     units: Map<string, string>;
@@ -250,9 +259,13 @@ function makeSeedPeople(hashes: Map<string, string>) {
           role: "STAFF",
           staff: { create: { fullName: s.fullName, position: s.position, unitId } },
         },
+        include: { staff: true },
       });
       ctx.ids.users.set(s.login, user.id);
       ctx.ids.staffUsers.set(s.unit, user.id);
+      if (user.staff) {
+        ctx.staffActors.set(s.unit, { userId: user.id, staffId: user.staff.id, unitId });
+      }
     }
   };
 }
@@ -429,6 +442,7 @@ export async function resetDemoData(options: ResetOptions = {}): Promise<ResetSu
   const ctx: SeedContext = {
     today: options.today ?? todayInMoscow(),
     calendar: buildCalendar(HOLIDAYS),
+    staffActors: new Map(),
     ids: {
       levels: new Map(),
       units: new Map(),
@@ -447,7 +461,8 @@ export async function resetDemoData(options: ResetOptions = {}): Promise<ResetSu
     seedApplicationTypes,
     makeSeedPeople(hashes),
     seedApplications,
-    // TODO(задания 4–6): расписание, оценки и долги, уведомления, тексты Rule.
+    seedSchedule,
+    // TODO(задания 5–6): оценки по семестрам, тексты Rule.
   ];
 
   await db.$transaction(
@@ -478,6 +493,10 @@ export async function countRows(): Promise<ResetSummary> {
     groups,
     applications,
     applicationEvents,
+    scheduleEvents,
+    scheduleChanges,
+    debts,
+    notifications,
   ] = await Promise.all([
     db.educationLevel.count(),
     db.unit.count(),
@@ -491,6 +510,10 @@ export async function countRows(): Promise<ResetSummary> {
     db.group.count(),
     db.application.count(),
     db.applicationEvent.count(),
+    db.scheduleEvent.count(),
+    db.scheduleChange.count(),
+    db.academicDebt.count(),
+    db.notification.count(),
   ]);
   return {
     levels,
@@ -505,5 +528,9 @@ export async function countRows(): Promise<ResetSummary> {
     groups,
     applications,
     applicationEvents,
+    scheduleEvents,
+    scheduleChanges,
+    debts,
+    notifications,
   };
 }

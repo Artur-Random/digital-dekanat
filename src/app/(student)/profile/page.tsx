@@ -1,4 +1,4 @@
-import { KeyRound } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -42,26 +42,11 @@ export default async function ProfilePage() {
         ])}
       </dl>
 
-      <section
-        aria-labelledby="password-title"
-        className="border-border mt-8 rounded-md border p-4"
-      >
-        <h2 id="password-title" className="flex items-center gap-2 text-lg font-semibold">
-          <KeyRound aria-hidden="true" className="size-5" />
-          Смена пароля
-        </h2>
-        <p className="text-ink-muted mt-2" id="password-disabled">
-          В демо-режиме смена пароля недоступна: аккаунтом пользуются несколько экспертов.
-        </p>
-        <button
-          type="button"
-          disabled
-          aria-describedby="password-disabled"
-          className="bg-surface-muted text-ink-muted mt-3 min-h-11 cursor-not-allowed rounded-md px-4"
-        >
-          Сменить пароль
-        </button>
-      </section>
+      {/* Информационная строка, а не кнопка: смена пароля в демо отключена, переходить некуда. */}
+      <p className="text-ink-muted mt-8 flex items-start gap-2" data-testid="password-disabled">
+        <Lock aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+        Смена пароля отключена в демо-режиме: аккаунтом пользуются несколько экспертов
+      </p>
 
       <div className="mt-8">
         <LogoutButton />

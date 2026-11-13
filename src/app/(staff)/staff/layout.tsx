@@ -16,7 +16,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-border border-b">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 px-4 py-1">
+        <div className="safe-x mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 py-1">
           <div className="flex min-h-11 flex-wrap items-center gap-x-3">
             <Logo />
             <span className="text-ink-muted" data-testid="staff-unit">
@@ -42,7 +42,10 @@ export default async function StaffLayout({ children }: { children: React.ReactN
           </nav>
         </div>
       </header>
-      <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+      <main
+        id="main"
+        className="safe-x mx-auto w-full max-w-5xl flex-1 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+      >
         {children}
       </main>
     </div>

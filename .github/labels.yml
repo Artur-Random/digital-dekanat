@@ -1,0 +1,14 @@
+# Метки репозитория. Создаются и обновляются workflow labels.yml после слияния в main:
+# у облачной сессии Claude Code нет инструмента для создания меток.
+- name: max-review
+  color: "5319E7"
+  description: "Замечание тестировщика Максима (через Кирилла)"
+- name: "severity:blocker"
+  color: "B60205"
+  description: "Блокер: экран не работает или виден чужой пользователь"
+- name: "severity:major"
+  color: "D93F0B"
+  description: "Важно: ошибка в данных, сроках, правилах или вёрстке"
+- name: "severity:minor"
+  color: "FBCA04"
+  description: "Мелочь: опечатка, отступ, формулировка"

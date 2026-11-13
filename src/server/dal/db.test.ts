@@ -35,6 +35,14 @@ describe("сброс демо-данных", () => {
       groups: 2,
       applications: 4,
       applicationEvents: 7,
+      // ПС-251: 15 пар в неделю, МП-261: 7 пар в неделю, 9 недель без праздника 4 ноября,
+      // плюс пересдача Алины. Проверяется в schedule.test.ts.
+      scheduleEvents: expect.any(Number),
+      // Смена аудитории, отмена, перенос и замена преподавателя у ПС-251, замена у МП-261.
+      scheduleChanges: 5,
+      debts: 1,
+      // Алина: 4 изменения, пересдача, справка, объявление; Денис: изменение и 2 объявления.
+      notifications: 10,
     };
     expect(await resetDemoData({ today: "2026-11-10" })).toEqual(expected);
     expect(await resetDemoData({ today: "2026-11-10" })).toEqual(expected);
