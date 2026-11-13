@@ -10,7 +10,7 @@
 // распространяет на эти уровни только пп. 2.4, 4.1, 4.17, 5.1, 5.8, 6.1, 6.5 (N-31). Поэтому тексты
 // одинаковы для четырёх уровней и хранятся один раз.
 // Тексты о стипендии показываются только очной форме и бюджету: для повышенной стипендии это N-22,
-// для обычной — 33общ п. 2.1 (X-5, дословный текст ждём от Кирилла).
+// для обычной — 33общ п. 2.1 (N-19).
 // Сверка Кириллом 14.11.2026: verified=true у сверенных текстов (docs/process/rules-review.md).
 // Подстановки в фигурных скобках вычисляет rules/rule-text.ts для конкретного студента.
 
@@ -31,7 +31,7 @@ export type RuleSeed = {
 
 const LEVELS: EducationLevelCode[] = ["BACHELOR", "MASTER", "SPECIALIZED_MASTER", "BASIC_HE"];
 
-/** Тексты, сверенные Кириллом 14.11.2026 (номера в rules-review.md: 1–13, 15, 16, кроме 14). */
+/** Тексты, сверенные Кириллом 14.11.2026 (номера в rules-review.md: 1–16; №14 — после проверки 686общ). */
 const VERIFIED = new Set<RuleTrigger>([
   "DEBT_STAGE_1",
   "DEBT_STAGE_2",
@@ -46,6 +46,7 @@ const VERIFIED = new Set<RuleTrigger>([
   "ACADEMIC_LEAVE_NO_STAY",
   "STIPEND_STOPPED",
   "STIPEND_PAID",
+  "RAISED_STIPEND_WINDOW",
   "RETAKE_SCHEDULE_PUBLISH",
   "GRADE_SATISFACTORY_ASSIGNMENT",
 ]);
@@ -174,7 +175,8 @@ export const RULES: readonly RuleSeed[] = [
     "STIPEND_AFTER_LIQUIDATION",
     "Стипендия после ликвидации задолженности",
     "После ликвидации задолженности обычную академическую стипендию назначают по итогам следующей сессии.",
-    [],
+    // N-19: назначение по результатам аттестации; о ликвидации прямой нормы нет — пометка прототипа.
+    ["N-19"],
     true,
     true,
   ),

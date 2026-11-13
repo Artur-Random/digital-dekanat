@@ -172,9 +172,9 @@ describe("whatIfScenarios", () => {
     }
   });
 
-  it("сверка Кириллом 14.11.2026: verified у всех, кроме окна стипендии и нового текста", () => {
+  it("сверка Кириллом 14.11.2026: verified у всех, кроме нового текста №17", () => {
     const unverified = RULES.filter((r) => !r.verified).map((r) => r.trigger);
-    expect(unverified.sort()).toEqual(["RAISED_STIPEND_WINDOW", "STIPEND_AFTER_LIQUIDATION"]);
+    expect(unverified).toEqual(["STIPEND_AFTER_LIQUIDATION"]);
   });
 
   it("№7: пересдача ограничивает только стипендию за отличную учёбу (п. 4.4.1, N-23)", () => {

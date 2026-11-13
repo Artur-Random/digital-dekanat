@@ -75,14 +75,14 @@ describe("сид учёбы", () => {
     );
   });
 
-  it("правила: 17 триггеров, у каждого четыре уровня, сверено 15", async () => {
+  it("правила: 17 триггеров, у каждого четыре уровня, сверено 16", async () => {
     const rules = await getDb().rule.findMany({
       select: { trigger: true, verified: true, _count: { select: { levels: true } } },
     });
     expect(rules).toHaveLength(17);
     expect(new Set(rules.map((r) => r.trigger)).size).toBe(17);
     expect(rules.every((r) => r._count.levels === 4)).toBe(true);
-    expect(rules.filter((r) => r.verified)).toHaveLength(15);
+    expect(rules.filter((r) => r.verified)).toHaveLength(16);
   });
 
   it("контекст стипендии: у Алины задолженность, у Дениса контракт", async () => {
