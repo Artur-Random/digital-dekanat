@@ -17,7 +17,16 @@ function place(item: ScheduleItem): string {
 }
 
 /** Одна пара. Значение передаётся текстом (метки «Отменена», «Изменено»), а не только цветом. */
-export function ScheduleItemView({ item }: { item: ScheduleItem }) {
+/** Текст правила о пересдаче из таблицы Rule (RETAKE_SCHEDULE_LOCKED, N-15). */
+export type RetakeRule = { text: string; normCodes: string[] } | null;
+
+export function ScheduleItemView({
+  item,
+  retakeRule,
+}: {
+  item: ScheduleItem;
+  retakeRule: RetakeRule;
+}) {
   const pairLabel = item.pair === null ? "" : `${item.pair} пара · `;
 
   if (item.kind === "moved-away") {
@@ -108,10 +117,12 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
       {item.reason && (changed || item.cancelled) ? (
         <p className="text-ink-muted mt-1 text-sm">Причина: {item.reason}</p>
       ) : null}
-      {item.isRetake ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <span>Дату и время пересдачи менять нельзя</span>
-          <NormChip code="N-15" />
+      {item.isRetake && retakeRule ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" data-testid="retake-rule">
+          <span>{retakeRule.text}</span>
+          {retakeRule.normCodes.map((code) => (
+            <NormChip key={code} code={code} />
+          ))}
         </div>
       ) : null}
     </li>

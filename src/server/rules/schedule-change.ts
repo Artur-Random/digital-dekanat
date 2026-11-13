@@ -72,7 +72,8 @@ export function planScheduleChange(
   if (isRetake(event.type) && (movesTime || patch.cancel || patch.room !== undefined)) {
     throw new ScheduleDomainError(
       "RETAKE_LOCKED",
-      "Дату и время пересдачи менять нельзя (N-15): допускается только замена преподавателя и формат проведения.",
+      // Объяснение для человека — текст Rule RETAKE_SCHEDULE_LOCKED (N-15), не строка в коде.
+      "Это изменение пересдачи недоступно.",
     );
   }
   if (event.cancelled) {

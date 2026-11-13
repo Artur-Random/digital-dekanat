@@ -6,6 +6,7 @@ import type { ActionFeedContext } from "@/server/rules/action-feed";
 import { parseStages } from "@/server/rules/application-stages";
 
 import { listScheduleForStudent } from "./schedule";
+import { getDebts } from "./study";
 
 /** Горизонт событий для ленты: пересдачи на 14 дней вперёд и изменения на 2 учебных дня. */
 const FEED_HORIZON_DAYS = 22;
@@ -18,7 +19,7 @@ export async function getActionFeedContext(
   const db = getDb();
   const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const to = new Date(now.getTime() + FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
-  const [profile, schedule, applications] = await Promise.all([
+  const [profile, schedule, applications, debts] = await Promise.all([
     db.studentProfile.findUnique({
       where: { id: actor.studentId },
       select: { studyForm: true, funding: true },
@@ -36,6 +37,7 @@ export async function getActionFeedContext(
         type: { select: { code: true, title: true, stages: true } },
       },
     }),
+    getDebts(actor),
   ]);
   if (!profile) return null;
   return {
@@ -53,5 +55,17 @@ export async function getActionFeedContext(
       stages: parseStages(a.type.stages),
       unitName: a.unit.name,
     })),
+    debts: debts.flatMap((d) =>
+      d.assessmentId
+        ? [
+            {
+              assessmentId: d.assessmentId,
+              discipline: d.discipline.name,
+              stage: d.stage,
+              deadline: d.deadline,
+            },
+          ]
+        : [],
+    ),
   };
 }

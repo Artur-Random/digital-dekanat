@@ -25,6 +25,7 @@ function ctx(overrides: Partial<ActionFeedContext> = {}): ActionFeedContext {
     events: [],
     changes: [],
     applications: [],
+    debts: [],
     ...overrides,
   };
 }

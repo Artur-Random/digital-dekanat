@@ -16,6 +16,7 @@ import {
 } from "@/lib/moscow-date";
 import { type StudentActor, requireStudent } from "@/server/auth/guards";
 import { listScheduleForStudent } from "@/server/dal/schedule";
+import { getRetakeRule } from "@/server/dal/study";
 import { buildTodayView, buildWeekView } from "@/server/rules/schedule";
 
 export const metadata: Metadata = { title: "Расписание" };
@@ -80,7 +81,7 @@ async function Today({ actor, now }: { actor: StudentActor; now: Date }) {
     new Date(now.getTime() + 22 * DAY),
   );
   const view = buildTodayView(now, schedule.events, schedule.changes, schedule.calendar);
-  return <TodayBlock view={view} />;
+  return <TodayBlock view={view} retakeRule={await getRetakeRule(actor)} />;
 }
 
 async function Week({
@@ -94,7 +95,10 @@ async function Week({
 }) {
   const from = moscowDateTime(actorWeek, "00:00");
   const to = moscowDateTime(addDays(actorWeek, 7), "00:00");
-  const schedule = await listScheduleForStudent(actor, from, to);
+  const [schedule, retakeRule] = await Promise.all([
+    listScheduleForStudent(actor, from, to),
+    getRetakeRule(actor),
+  ]);
   const days = buildWeekView(actorWeek, schedule.events, schedule.changes, schedule.calendar);
   const empty = days.every((d) => d.items.length === 0);
   const prev = addDays(actorWeek, -7);
@@ -149,7 +153,7 @@ async function Week({
                 ) : (
                   <ul className="mt-2 flex flex-col gap-2">
                     {d.items.map((item) => (
-                      <ScheduleItemView key={item.anchor} item={item} />
+                      <ScheduleItemView key={item.anchor} item={item} retakeRule={retakeRule} />
                     ))}
                   </ul>
                 )}

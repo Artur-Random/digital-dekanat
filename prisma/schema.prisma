@@ -69,8 +69,20 @@ enum RuleTrigger {
   DEBT_STAGE_1
   DEBT_STAGE_2
   GRADE_SATISFACTORY
+  /// Неявка без уважительной причины.
   NO_SHOW
+  /// Неявка по уважительной причине: сообщить в течение 3 рабочих дней.
   ABSENCE_NOTICE
+  // Задание 5 (аддитивно).
+  DEBT_NOT_LIQUIDATED
+  RETAKE_RAISED_STIPEND
+  RETAKE_SCHEDULE_LOCKED
+  CONDITIONAL_TRANSFER
+  RETAKE_FREE
+  ACADEMIC_LEAVE_NO_STAY
+  STIPEND_STOPPED
+  STIPEND_PAID
+  RAISED_STIPEND_WINDOW
 }
 
 enum HolidayKind {
@@ -158,6 +170,7 @@ model EducationLevel {
 
   gradeBands       GradeBand[]
   rules            Rule[]
+  ruleLevels       Rule[]            @relation("RuleLevels")
   groups           Group[]
   students         StudentProfile[]
   applicationTypes ApplicationType[]
@@ -203,12 +216,20 @@ model ApplicationType {
 }
 
 model Rule {
-  id        String      @id @default(cuid())
-  levelId   String
-  trigger   RuleTrigger
-  title     String
-  body      String
-  normCodes String[]
+  id          String           @id @default(cuid())
+  /// Первый уровень из levels (поле задания 2; полный список уровней — в levels).
+  levelId     String
+  trigger     RuleTrigger
+  title       String
+  /// Текст простым языком с подстановками {deadline}, {stopDate} и т.п.
+  body        String
+  normCodes   String[]
+  /// Уровни, к которым относится текст: один текст на несколько уровней без копий (задание 5).
+  levels      EducationLevel[] @relation("RuleLevels")
+  /// Только для очной формы и бюджета (N-22): тексты о стипендии.
+  stipendOnly Boolean          @default(false)
+  /// Сверено Кириллом (docs/process/rules-review.md).
+  verified    Boolean          @default(false)
 
   level EducationLevel @relation(fields: [levelId], references: [id], onDelete: Cascade)
 
@@ -224,6 +245,8 @@ model Norm {
   /// У норм закона (273-ФЗ) страницы нет.
   page     String?
   quote    String
+  /// «Где используется» из строки «Где:» реестра (задание 5).
+  usedIn   String?
 }
 
 /// Исключения производственного календаря: нерабочие будни и рабочие выходные.

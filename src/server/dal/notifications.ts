@@ -107,12 +107,19 @@ export async function notifyRetakeSchedulePublished(
       throw new ScheduleDomainError("NOT_FOUND", "Пересдача не найдена.");
     }
     const e = event.input;
-    const notice = retakeScheduleNotice({
-      discipline: e.discipline,
-      startsAt: e.startsAt,
-      stage: e.type === "RETAKE_1" ? "I" : "II",
-      place: e.format === "ONLINE" ? (e.platform ?? "дистанционно") : `ауд. ${e.room ?? "—"}`,
+    const locked = await tx.rule.findFirst({
+      where: { trigger: "RETAKE_SCHEDULE_LOCKED" },
+      select: { body: true, normCodes: true },
     });
+    const notice = retakeScheduleNotice(
+      {
+        discipline: e.discipline,
+        startsAt: e.startsAt,
+        stage: e.type === "RETAKE_1" ? "I" : "II",
+        place: e.format === "ONLINE" ? (e.platform ?? "дистанционно") : `ауд. ${e.room ?? "—"}`,
+      },
+      locked,
+    );
     return insert(tx, [event.studentUserId], {
       type: "RETAKE",
       ...notice,

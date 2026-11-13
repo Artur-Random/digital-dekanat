@@ -24,6 +24,7 @@ import {
 
 import { APPLICATION_TYPES, type ApplicationTypeSeed } from "./application-types";
 import { HOLIDAYS } from "./holidays";
+import { RULES } from "./rules";
 import { seedSchedule } from "./schedule";
 import { EDUCATION_LEVELS, GROUPS, INSTITUTE, STAFF, STUDENTS, UNITS } from "./people";
 
@@ -174,6 +175,31 @@ async function seedGradeBands(tx: Tx, ctx: SeedContext): Promise<void> {
     }
   }
   await tx.gradeBand.createMany({ data: rows });
+}
+
+/** Тексты правил: одна строка на текст, уровни через связь levels (без копий по уровням). */
+async function seedRules(tx: Tx, ctx: SeedContext): Promise<void> {
+  for (const r of RULES) {
+    const levelIds = r.levels.map((code) => {
+      const id = ctx.ids.levels.get(code);
+      if (!id) throw new Error(`Нет уровня ${code}`);
+      return id;
+    });
+    const [first] = levelIds;
+    if (!first) throw new Error(`У правила ${r.trigger} нет уровней`);
+    await tx.rule.create({
+      data: {
+        levelId: first,
+        trigger: r.trigger,
+        title: r.title,
+        body: r.body,
+        normCodes: r.normCodes,
+        stipendOnly: r.stipendOnly,
+        verified: r.verified,
+        levels: { connect: levelIds.map((id) => ({ id })) },
+      },
+    });
+  }
 }
 
 function makeSeedNorms(registryPath: string) {
@@ -458,11 +484,11 @@ export async function resetDemoData(options: ResetOptions = {}): Promise<ResetSu
     seedReferenceData,
     seedGradeBands,
     makeSeedNorms(registryPath),
+    seedRules,
     seedApplicationTypes,
     makeSeedPeople(hashes),
     seedApplications,
     seedSchedule,
-    // TODO(задания 5–6): оценки по семестрам, тексты Rule.
   ];
 
   await db.$transaction(
@@ -497,6 +523,8 @@ export async function countRows(): Promise<ResetSummary> {
     scheduleChanges,
     debts,
     notifications,
+    rules,
+    assessments,
   ] = await Promise.all([
     db.educationLevel.count(),
     db.unit.count(),
@@ -514,6 +542,8 @@ export async function countRows(): Promise<ResetSummary> {
     db.scheduleChange.count(),
     db.academicDebt.count(),
     db.notification.count(),
+    db.rule.count(),
+    db.assessment.count(),
   ]);
   return {
     levels,
@@ -532,5 +562,7 @@ export async function countRows(): Promise<ResetSummary> {
     scheduleChanges,
     debts,
     notifications,
+    rules,
+    assessments,
   };
 }

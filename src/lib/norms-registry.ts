@@ -7,6 +7,8 @@ export type ParsedNorm = {
   clause: string;
   page: string | null;
   quote: string;
+  /** «Где используется»: строка «Где: …» реестра без отметки «Сверено». */
+  usedIn: string | null;
 };
 
 const NORM_HEADER = /^\*\*(N-\d+)\.\*\*\s*(.*)$/;
@@ -72,7 +74,20 @@ export function parseNormsRegistry(markdown: string): ParsedNorm[] {
     if (!quoteLine.startsWith(">")) {
       throw new NormsRegistryError(`${code}: после заголовка нет строки цитаты «> «…»»`);
     }
-    norms.push({ code, document, clause, page, quote: unquote(code, quoteLine) });
+    // «Где: …» — первая строка, начинающаяся с «Где:», до следующей нормы.
+    let usedIn: string | null = null;
+    for (let k = j + 1; k < lines.length; k++) {
+      const next = lines[k] ?? "";
+      if (NORM_HEADER.test(next) || DOCUMENT_HEADER.test(next)) break;
+      if (next.startsWith("Где:")) {
+        usedIn = next
+          .replace(/^Где:\s*/, "")
+          .replace(/\s*Сверено:.*$/, "")
+          .trim();
+        break;
+      }
+    }
+    norms.push({ code, document, clause, page, quote: unquote(code, quoteLine), usedIn });
     seen.add(code);
     i = j;
   }

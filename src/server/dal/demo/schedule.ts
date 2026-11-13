@@ -1,14 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
-import {
-  type DateKey,
-  addDays,
-  dateOnly,
-  mondayOf,
-  moscowDateTime,
-  weekday,
-} from "@/lib/moscow-date";
+import { type DateKey, addDays, mondayOf, moscowDateTime, weekday } from "@/lib/moscow-date";
 import type { StaffActor } from "@/server/auth/guards";
 import { bellByPair } from "@/server/rules/bells";
 import { studyDayAfter } from "@/server/rules/schedule";
@@ -21,6 +14,8 @@ import {
 } from "@/server/services/notifications";
 
 import type { SeedContext } from "./reset";
+import { seedStudy } from "./study";
+import { ALINA_DEBT_DISCIPLINE } from "./study-data";
 import {
   ANNOUNCEMENTS,
   CHANGE_REASONS,
@@ -122,13 +117,6 @@ function eventsOn(index: Map<EventKey, string>, group: string, day: DateKey): [n
   return result.sort((a, b) => a[0] - b[0]);
 }
 
-/** Прошлая летняя сессия: долг образовался 30 июня последнего завершённого учебного года. */
-function lastSummerSessionEnd(today: DateKey): DateKey {
-  const year = Number(today.slice(0, 4));
-  const thisYear = `${year}-06-30`;
-  return today > thisYear ? thisYear : `${year - 1}-06-30`;
-}
-
 /**
  * Расписание, изменения, долг Алины и уведомления. Изменения и уведомления создаются теми же
  * сервисами, что и в работающем приложении (createScheduleChange, publish*).
@@ -138,6 +126,8 @@ export async function seedSchedule(tx: Tx, ctx: SeedContext): Promise<void> {
   const index = new Map<EventKey, string>();
   await seedGroupTimetable(tx, ctx, refs, "ПС-251", PS251, index);
   await seedGroupTimetable(tx, ctx, refs, "МП-261", MP261, index);
+  // Оценки, задолженность и события сессии (задание 5): до пересдачи, которая на неё опирается.
+  await seedStudy(tx, ctx, refs);
 
   const dekanat = staffActor(ctx, "DEKANAT");
   const mfc = staffActor(ctx, "MFC");
@@ -243,7 +233,7 @@ export async function seedSchedule(tx: Tx, ctx: SeedContext): Promise<void> {
     options(at(yesterday, "16:00")),
   );
 
-  await seedAlinaDebt(tx, ctx, refs, dekanat, yesterday);
+  await seedAlinaRetake(tx, ctx, refs, dekanat, yesterday);
 
   // «Справка готова» — в момент перехода заявки Алины в статус READY.
   const ready = await tx.application.findFirst({
@@ -266,8 +256,8 @@ export async function seedSchedule(tx: Tx, ctx: SeedContext): Promise<void> {
   await tx.notification.updateMany({ where: { type: "ANNOUNCEMENT" }, data: { isRead: true } });
 }
 
-/** Долг Алины по дисциплине прошлого семестра, этап I (данные для задания 5) и пересдача. */
-async function seedAlinaDebt(
+/** Пересдача Алины (этап I) по задолженности из seedStudy и уведомление о расписании пересдач. */
+async function seedAlinaRetake(
   tx: Tx,
   ctx: SeedContext,
   refs: Refs,
@@ -275,32 +265,7 @@ async function seedAlinaDebt(
   publishedDay: DateKey,
 ): Promise<void> {
   const studentId = requireId(ctx.ids.students, "alina", "студента");
-  const disciplineId = requireId(refs.disciplines, "anatomy", "дисциплины");
-  const formed = lastSummerSessionEnd(ctx.today);
-  await tx.assessment.create({
-    data: {
-      studentId,
-      disciplineId,
-      semester: 2,
-      controlForm: "EXAM",
-      score: 38,
-      grade: "UNSATISFACTORY",
-      attempt: 0,
-      date: moscowDateTime(addDays(formed, -5), "10:00"),
-    },
-  });
-  // N-10: повторная аттестация в пределах одного календарного года с момента образования долга.
-  const deadline = `${Number(formed.slice(0, 4)) + 1}${formed.slice(4)}`;
-  await tx.academicDebt.create({
-    data: {
-      studentId,
-      disciplineId,
-      formedAt: dateOnly(formed),
-      stage: "STAGE_1",
-      deadline: dateOnly(deadline),
-    },
-  });
-
+  const disciplineId = requireId(refs.disciplines, ALINA_DEBT_DISCIPLINE, "дисциплины");
   // Пересдача (этап I) через 7 рабочих дней (в пределах 5–9), 6 пара: после пар группы.
   // Пересдача — в будний рабочий день: рабочую субботу пропускаем.
   let retakeDay = addWorkingDays(ctx.today, 7, ctx.calendar);

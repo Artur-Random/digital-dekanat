@@ -7,12 +7,16 @@ import { formatSlot } from "@/lib/format-date";
 
 import { pairOf } from "./bells";
 
-export function retakeScheduleNotice(retake: {
-  discipline: string;
-  startsAt: Date;
-  stage: "I" | "II";
-  place: string;
-}): { title: string; body: string } {
+export function retakeScheduleNotice(
+  retake: {
+    discipline: string;
+    startsAt: Date;
+    stage: "I" | "II";
+    place: string;
+  },
+  /** Текст правила RETAKE_SCHEDULE_LOCKED из таблицы Rule и его нормы. */
+  locked: { body: string; normCodes: string[] } | null,
+): { title: string; body: string } {
   const slot = formatSlot({
     date: toDateKey(retake.startsAt),
     pair: pairOf(moscowTime(retake.startsAt)),
@@ -20,7 +24,9 @@ export function retakeScheduleNotice(retake: {
   });
   return {
     title: "Опубликовано расписание пересдач",
-    body: `Пересдача (этап ${retake.stage}) по дисциплине «${retake.discipline}»: ${slot}, ${retake.place}. Дату и время пересдачи изменить нельзя (N-15).`,
+    body: `Пересдача (этап ${retake.stage}) по дисциплине «${retake.discipline}»: ${slot}, ${retake.place}.${
+      locked ? ` ${locked.body} (${locked.normCodes.join(", ")})` : ""
+    }`,
   };
 }
 
