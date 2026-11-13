@@ -72,8 +72,13 @@ export function stipendStatus(
   // образованные в эту аттестацию (даже если уже ликвидированы: о возобновлении выплаты
   // в реестре нормы нет).
   const events: { date: DateKey; reason: "debt" | "satisfactory" }[] = [
-    ...lastSession
-      .filter((a) => a.grade === "SATISFACTORY")
+    // Тройки последней завершённой аттестации и уже полученные тройки идущей сессии:
+    // N-21 прекращает выплату с месяца после получения оценки, не дожидаясь конца сессии.
+    ...assessments
+      .filter(
+        (a) =>
+          a.grade === "SATISFACTORY" && a.semester >= lastSemester && toDateKey(a.date) <= today,
+      )
       .map((a) => ({ date: toDateKey(a.date), reason: "satisfactory" as const })),
     ...debts
       .filter((d) => d.open || d.formedAt >= sessionStart)

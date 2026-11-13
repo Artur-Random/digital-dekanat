@@ -55,6 +55,20 @@ describe("stipendStatus (N-20, N-21, N-22, N-29)", () => {
     expect(s).toMatchObject({ paid: false, stoppedFrom: "2026-07-01", reason: "satisfactory" });
   });
 
+  it("тройка до конца сессии прекращает выплату сразу (N-21)", () => {
+    const s = stipendStatus(
+      budget,
+      [
+        { semester: 2, grade: "EXCELLENT", date: moscowDateTime("2026-06-10", "10:00") },
+        { semester: 3, grade: "SATISFACTORY", date: moscowDateTime("2027-01-19", "10:00") },
+        { semester: 3, grade: null, date: moscowDateTime("2027-02-03", "10:00") },
+      ],
+      [],
+      moscowDateTime("2027-02-02", "12:00"),
+    );
+    expect(s).toMatchObject({ paid: false, stoppedFrom: "2027-02-01", reason: "satisfactory" });
+  });
+
   it("ликвидированная задолженность прошлой сессии всё равно дала прекращение", () => {
     const s = stipendStatus(
       budget,
