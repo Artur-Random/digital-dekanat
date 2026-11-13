@@ -230,3 +230,20 @@ describe("уведомления: только своё подразделени
     expect(await getDb().notification.count()).toBe(before);
   });
 });
+
+describe("сброс демо в особые дни календаря", () => {
+  // Рабочая суббота 20.02.2027 без пар, праздники и выходные вокруг неё: сброс не должен падать.
+  for (const today of ["2027-02-19", "2027-02-20", "2027-02-21", "2026-11-03", "2026-12-30"]) {
+    it(`сброс на ${today} проходит, у Алины есть изменения и пересдача в будний день`, async () => {
+      await resetDemoData({ today });
+      expect(await getDb().scheduleChange.count()).toBe(5);
+      const retake = await getDb().scheduleEvent.findFirstOrThrow({
+        where: { type: "RETAKE_1" },
+        select: { startsAt: true },
+      });
+      const dow = new Date(`${toDateKey(retake.startsAt)}T12:00:00Z`).getUTCDay();
+      expect(dow).toBeGreaterThanOrEqual(1);
+      expect(dow).toBeLessThanOrEqual(5);
+    });
+  }
+});

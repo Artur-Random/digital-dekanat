@@ -138,6 +138,19 @@ test("BackButton: после перехода внутри сайта возвр
   await expect(page).toHaveURL(/\/schedule$/);
 });
 
+test("BackButton: после возврата к первому экрану ведёт в родителя, а не из сайта", async ({
+  page,
+}) => {
+  await loginAs(page, "alina");
+  await page.goto("/notifications");
+  await page.getByRole("link", { name: "Расписание" }).click();
+  await expect(page).toHaveURL(/\/schedule$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/notifications$/);
+  await page.getByTestId("back-button").click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test("360 px: нет горизонтального скролла, последний элемент не перекрыт нижней навигацией", async ({
   page,
 }) => {

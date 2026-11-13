@@ -146,10 +146,19 @@ export async function seedSchedule(tx: Tx, ctx: SeedContext): Promise<void> {
   const at = (day: DateKey, time: string) => moscowDateTime(day, time);
   const options = (now: Date) => ({ tx, now });
 
-  // Ближайший учебный день: сегодня, если сегодня рабочий, иначе следующий.
-  // Так демонстрация работает и в воскресенье 22.11.
-  const d0 = isWorkingDay(today, ctx.calendar) ? today : studyDayAfter(today, ctx.calendar);
-  const d1 = studyDayAfter(d0, ctx.calendar);
+  // Ближайший учебный день: сегодня, если сегодня рабочий, иначе следующий. Берём дни, в которые
+  // у группы есть пары: в рабочую субботу (20.02.2027) пар нет. Так демонстрация работает
+  // и в воскресенье 22.11.
+  const firstDayWithPairs = (group: string, from: DateKey) => {
+    let day = from;
+    for (let i = 0; i < 30 && eventsOn(index, group, day).length === 0; i++) {
+      day = studyDayAfter(day, ctx.calendar);
+    }
+    return day;
+  };
+  const start = isWorkingDay(today, ctx.calendar) ? today : studyDayAfter(today, ctx.calendar);
+  const d0 = firstDayWithPairs("ПС-251", start);
+  const d1 = firstDayWithPairs("ПС-251", studyDayAfter(d0, ctx.calendar));
 
   // Объявление для обеих групп — самое раннее уведомление.
   const announcementDay = subtractWorkingDays(today, 2, ctx.calendar);
@@ -223,8 +232,9 @@ export async function seedSchedule(tx: Tx, ctx: SeedContext): Promise<void> {
   );
 
   // МП-261: замена преподавателя в ближайший учебный день.
-  const mpEvent = eventsOn(index, "МП-261", d0)[0];
-  if (!mpEvent) throw new Error(`Нет пар МП-261 на ${d0}`);
+  const mpDay = firstDayWithPairs("МП-261", start);
+  const mpEvent = eventsOn(index, "МП-261", mpDay)[0];
+  if (!mpEvent) throw new Error(`Нет пар МП-261 на ${mpDay}`);
   await createScheduleChange(
     dekanat,
     mpEvent[1],
@@ -288,7 +298,11 @@ async function seedAlinaDebt(
   });
 
   // Пересдача (этап I) через 7 рабочих дней (в пределах 5–9), 6 пара: после пар группы.
-  const retakeDay = addWorkingDays(ctx.today, 7, ctx.calendar);
+  // Пересдача — в будний рабочий день: рабочую субботу пропускаем.
+  let retakeDay = addWorkingDays(ctx.today, 7, ctx.calendar);
+  while (weekday(retakeDay) === 6 || weekday(retakeDay) === 0) {
+    retakeDay = addWorkingDays(retakeDay, 1, ctx.calendar);
+  }
   const bell = bellByPair(6);
   const retake = await tx.scheduleEvent.create({
     data: {
