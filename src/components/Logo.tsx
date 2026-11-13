@@ -12,7 +12,7 @@ export function Logo() {
           strokeLinecap="round"
         />
       </svg>
-      <span>Кабинет</span>
+      <span>Студкаб</span>
     </span>
   );
 }

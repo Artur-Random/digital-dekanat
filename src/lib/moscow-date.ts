@@ -56,3 +56,22 @@ export function formatMoscowIso(date: Date): string {
   const shifted = new Date(date.getTime() + 3 * 60 * 60 * 1000);
   return `${shifted.toISOString().slice(0, 19)}${MOSCOW_OFFSET}`;
 }
+
+/** Время по Москве «ЧЧ:ММ». */
+export function moscowTime(date: Date): string {
+  const shifted = new Date(date.getTime() + 3 * 60 * 60 * 1000);
+  return shifted.toISOString().slice(11, 16);
+}
+
+/** Понедельник недели, в которую входит дата. */
+export function mondayOf(key: DateKey): DateKey {
+  const day = weekday(key);
+  return addDays(key, day === 0 ? -6 : 1 - day);
+}
+
+/** Строгая проверка «ГГГГ-ММ-ДД»: существующая календарная дата. */
+export function isDateKey(value: string): value is DateKey {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}

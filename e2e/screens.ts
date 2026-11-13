@@ -15,12 +15,33 @@ export type Screen = {
   path: string | (() => Promise<string>);
   role: ScreenRole;
   account?: TestAccount;
+  /** Дополнительно снять в эмуляции iPhone (scripts/screenshots.ts). */
+  iphone?: boolean;
 };
 
 // EP — профиль сотрудника: в спецификации кода нет, экран добавлен заданием 2.
 export const SCREENS: readonly Screen[] = [
   { code: "S0", slug: "login", path: "/login", role: "anonymous" },
-  { code: "S1", slug: "home", path: "/", role: "student", account: "alina" },
+  { code: "S1", slug: "home", path: "/", role: "student", account: "alina", iphone: true },
+  {
+    code: "S2",
+    slug: "schedule-today",
+    path: "/schedule",
+    role: "student",
+    account: "alina",
+    iphone: true,
+  },
+  {
+    code: "S2",
+    slug: "schedule-week",
+    path: "/schedule?view=week",
+    role: "student",
+    account: "alina",
+  },
+  { code: "S6", slug: "notifications", path: "/notifications", role: "student", account: "alina" },
+  { code: "S8", slug: "why", path: "/why", role: "student", account: "alina" },
+  { code: "S1", slug: "home-denis", path: "/", role: "student", account: "denis" },
+  { code: "S2", slug: "schedule-denis", path: "/schedule", role: "student", account: "denis" },
   { code: "S4", slug: "applications", path: "/applications", role: "student", account: "alina" },
   { code: "S7", slug: "profile", path: "/profile", role: "student", account: "alina" },
   {

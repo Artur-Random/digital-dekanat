@@ -8,7 +8,10 @@ type ErrorPageProps = {
 // Детали ошибки студенту не показываем: они только в серверном логе.
 export default function ErrorPage({ reset }: ErrorPageProps) {
   return (
-    <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    <main
+      id="main"
+      className="safe-x mx-auto w-full max-w-5xl flex-1 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+    >
       <h1 className="text-2xl font-semibold">Что-то пошло не так</h1>
       <p className="text-ink-muted mt-4">Страница не загрузилась. Попробуйте ещё раз.</p>
       <button

@@ -102,6 +102,8 @@ enum ScheduleChangeField {
   ROOM
   TEACHER
   FORMAT
+  /// Пара отменена: oldValue "false", newValue "true" (задание 4).
+  CANCELLED
 }
 
 enum DebtStage {

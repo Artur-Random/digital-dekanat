@@ -6,7 +6,9 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { chromium } from "@playwright/test";
+import { chromium, devices } from "@playwright/test";
+
+const IPHONE = "iPhone 15";
 
 import { prepareForScreen } from "../e2e/auth";
 import { BASE_URL } from "../e2e/base-url";
@@ -90,6 +92,23 @@ async function main(): Promise<void> {
         console.log(file);
         await context.close();
       }
+    }
+    // Эмуляция iPhone из Playwright: ширина, плотность пикселей, user agent. Отступы под вырез
+    // эмуляция не показывает — их проверяет Кирилл на телефоне.
+    for (const screen of SCREENS.filter((s) => s.iphone)) {
+      const context = await browser.newContext({
+        ...devices[IPHONE],
+        locale: "ru-RU",
+        timezoneId: "Europe/Moscow",
+        baseURL: BASE_URL,
+      });
+      const page = await context.newPage();
+      await prepareForScreen(page, screen);
+      await page.goto(await resolvePath(screen), { waitUntil: "networkidle" });
+      const file = join(outDir, `${screen.code}-${screen.slug}-iphone.png`);
+      await page.screenshot({ path: file, fullPage: true });
+      console.log(file);
+      await context.close();
     }
   } finally {
     await browser.close();

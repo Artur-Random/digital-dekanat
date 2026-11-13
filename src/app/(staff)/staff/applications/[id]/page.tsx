@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ApplicationHistory } from "@/components/ApplicationHistory";
+import { BackButton } from "@/components/BackButton";
 import { formatDay } from "@/lib/format-date";
 import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { requireStaff } from "@/server/auth/guards";
@@ -22,11 +22,7 @@ export default async function StaffApplicationPage({ params }: Props) {
 
   return (
     <>
-      <p>
-        <Link href="/staff" className="text-accent inline-flex min-h-11 items-center underline">
-          Очередь
-        </Link>
-      </p>
+      <BackButton fallbackHref="/staff" />
       <h1 className="mt-2 text-2xl font-semibold">{app.type.title}</h1>
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
         <dt className="text-ink-muted">Студент</dt>

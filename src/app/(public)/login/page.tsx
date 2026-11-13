@@ -19,7 +19,10 @@ export default async function LoginPage({ searchParams }: Props) {
   if (user) redirect(next ?? (user.role === "STAFF" ? "/staff" : "/"));
 
   return (
-    <main id="main" className="mx-auto w-full max-w-sm flex-1 px-4 py-8">
+    <main
+      id="main"
+      className="safe-x mx-auto w-full max-w-sm flex-1 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+    >
       <Logo />
       <h1 className="mt-6 text-2xl font-semibold">Вход</h1>
       <p className="text-ink-muted mt-2">
