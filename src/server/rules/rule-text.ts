@@ -7,6 +7,8 @@ export type RuleText = {
   body: string;
   normCodes: string[];
   stipendOnly: boolean;
+  /** Прямой нормы нет: пометка «так устроено в прототипе». */
+  prototypeAssumption: boolean;
 };
 
 export class RuleTextError extends Error {

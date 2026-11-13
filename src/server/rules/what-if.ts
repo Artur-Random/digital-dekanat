@@ -12,7 +12,12 @@ import { scheduleLink } from "./schedule";
 import { type StipendStudent, firstOfNextMonth, isStipendEligible } from "./stipend";
 import { type ProductionCalendar, addWorkingDays } from "./working-days";
 
-export type ScenarioItem = { trigger: string; text: string; normCodes: string[] };
+export type ScenarioItem = {
+  trigger: string;
+  text: string;
+  normCodes: string[];
+  prototypeAssumption: boolean;
+};
 export type ScenarioAction = { label: string; href: string };
 export type Scenario = {
   id: string;
@@ -48,7 +53,14 @@ export function whatIfScenarios(input: WhatIfInput): Scenario[] {
   function item(trigger: string, vars: Record<string, string> = {}): ScenarioItem[] {
     const rule = input.rules.find((r) => r.trigger === trigger);
     if (!rule || (rule.stipendOnly && !eligible)) return [];
-    return [{ trigger, text: renderRule(rule.body, vars), normCodes: rule.normCodes }];
+    return [
+      {
+        trigger,
+        text: renderRule(rule.body, vars),
+        normCodes: rule.normCodes,
+        prototypeAssumption: rule.prototypeAssumption,
+      },
+    ];
   }
 
   const scenarios: Scenario[] = [];
@@ -74,6 +86,7 @@ export function whatIfScenarios(input: WhatIfInput): Scenario[] {
           stopDate: date(firstOfNextMonth(formedAt)),
           reason: "академическая задолженность",
         }),
+        ...item("STIPEND_AFTER_LIQUIDATION"),
         ...(input.debt.afterAnnualSession ? item("CONDITIONAL_TRANSFER") : []),
       ],
       actions: [],

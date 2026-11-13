@@ -85,7 +85,8 @@ export const UNITS = [
 ] as const satisfies readonly { code: UnitCode; name: string }[];
 
 // rulesFilled: для каких уровней в прототипе заполнены правила аттестации. 426общ (N-01)
-// распространяется и на специалитет, и на базовое ВО; false у них — сужение MVP, а не норма.
+// распространяется и на специалитет; false у него — сужение MVP, а не норма. Базовое ВО
+// добавлено 14.11.2026 по решению Кирилла (N-01, Указ № 343 п. 5 — N-53).
 export const EDUCATION_LEVELS = [
   { code: "BACHELOR", name: "Бакалавриат", rulesFilled: true },
   { code: "SPECIALIST", name: "Специалитет", rulesFilled: false },
@@ -95,7 +96,7 @@ export const EDUCATION_LEVELS = [
     name: "Специализированное высшее образование (программа магистратуры)",
     rulesFilled: true,
   },
-  { code: "BASIC_HE", name: "Базовое высшее образование", rulesFilled: false },
+  { code: "BASIC_HE", name: "Базовое высшее образование", rulesFilled: true },
   { code: "SPO", name: "Среднее профессиональное образование", rulesFilled: false },
   { code: "POSTGRAD", name: "Аспирантура", rulesFilled: false },
   { code: "ASSISTANTSHIP", name: "Ассистентура-стажировка", rulesFilled: false },
