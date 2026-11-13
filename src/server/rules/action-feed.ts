@@ -8,7 +8,7 @@ import type {
   StudyForm,
 } from "@/generated/prisma/enums";
 import { type DateKey, addDays, moscowTime, toDateKey } from "@/lib/moscow-date";
-import { formatDateKey, formatSlot, pluralDays } from "@/lib/format-date";
+import { formatDateKey, formatDateKeySmart, formatSlot, pluralDays } from "@/lib/format-date";
 
 import type { StageBranch } from "./application-stages";
 import { statusTitle } from "./application-stages";
@@ -30,17 +30,16 @@ import { type ProductionCalendar, addWorkingDays } from "./working-days";
 export type Urgency = "today" | "soon" | "later";
 
 /**
- * Виды элементов. absence-notice («Не смогу прийти», задание 6) и debt (долги, задание 5)
- * объявлены заранее и пока не формируются.
+ * Виды элементов. absence-notice («Не смогу прийти», задание 6) объявлен заранее и пока
+ * не формируется. Окна повышенной стипендии в ленте нет: оно справочно в S3 (spec, S1).
  */
 export type ActionKind =
   | "schedule-change"
   | "retake"
   | "application-ready"
   | "application-progress"
-  | "scholarship-window"
-  | "absence-notice"
-  | "debt";
+  | "debt"
+  | "absence-notice";
 
 export type ActionItem = {
   kind: ActionKind;
@@ -73,14 +72,21 @@ export type ActionFeedContext = {
   events: ScheduleEventInput[];
   changes: ScheduleChangeInput[];
   applications: FeedApplication[];
+  /** Открытые задолженности: ссылка на S3a и крайний срок по N-10. */
+  debts: FeedDebt[];
+};
+
+export type FeedDebt = {
+  assessmentId: string;
+  discipline: string;
+  stage: "STAGE_1" | "STAGE_2";
+  deadline: DateKey;
 };
 
 /** Изменения расписания показываем на ближайшие 2 учебных дня. */
 const CHANGE_HORIZON_STUDY_DAYS = 2;
 /** Пересдачи — в ближайшие 14 дней. */
 const RETAKE_HORIZON_DAYS = 14;
-/** Окно стипендии показываем, если оно открыто или откроется не позже чем через 30 дней. */
-const SCHOLARSHIP_LEAD_DAYS = 30;
 /** «Скоро» — срок в ближайшие 3 рабочих дня. */
 const SOON_WORKING_DAYS = 3;
 
@@ -222,53 +228,18 @@ function applicationItems(now: Date, ctx: ActionFeedContext): ActionItem[] {
   return result;
 }
 
-/** Окна подачи документов на повышенную стипендию (N-29). */
-function scholarshipWindows(year: number): { opens: DateKey; closes: DateKey }[] {
-  return [
-    { opens: `${year}-02-05`, closes: `${year}-03-05` },
-    { opens: `${year}-07-10`, closes: `${year}-08-10` },
-  ];
-}
-
-function scholarshipItems(now: Date, ctx: ActionFeedContext): ActionItem[] {
-  // N-22: повышенная стипендия — только очная форма и бюджет.
-  if (ctx.student.studyForm !== "FULL_TIME" || ctx.student.funding !== "BUDGET") return [];
+function debtItems(now: Date, ctx: ActionFeedContext): ActionItem[] {
   const today = toDateKey(now);
-  const year = Number(today.slice(0, 4));
-  const windows = [...scholarshipWindows(year), ...scholarshipWindows(year + 1)];
-  const open = windows.find((w) => w.opens <= today && today <= w.closes);
-  const normCodes = ["N-29", "N-22"];
-  const href = "/why#N-29";
-  if (open) {
-    return [
-      {
-        kind: "scholarship-window",
-        title: "Открыт приём документов на повышенную стипендию",
-        details: `Документы, подтверждающие право на стипендию, принимаются до ${formatDateKey(open.closes)}`,
-        dueAt: { kind: "date", date: open.closes },
-        urgency: urgencyFor(open.closes, today, ctx.calendar),
-        href,
-        normCodes,
-        prototypeAssumption: false,
-      },
-    ];
-  }
-  const upcoming = windows.find(
-    (w) => w.opens > today && daysBetween(today, w.opens) <= SCHOLARSHIP_LEAD_DAYS,
-  );
-  if (!upcoming) return [];
-  return [
-    {
-      kind: "scholarship-window",
-      title: `Окно подачи документов на повышенную стипендию откроется ${formatDateKey(upcoming.opens)}`,
-      details: `Приём документов с ${formatDateKey(upcoming.opens)} по ${formatDateKey(upcoming.closes)}`,
-      dueAt: { kind: "date", date: upcoming.opens },
-      urgency: "later",
-      href,
-      normCodes,
-      prototypeAssumption: false,
-    },
-  ];
+  return ctx.debts.map((d) => ({
+    kind: "debt" as const,
+    title: `Задолженность по дисциплине «${d.discipline}»: ликвидировать до ${formatDateKeySmart(d.deadline, today)}`,
+    details: d.stage === "STAGE_1" ? "Этап I" : "Этап II (комиссия)",
+    dueAt: { kind: "date" as const, date: d.deadline },
+    urgency: urgencyFor(d.deadline, today, ctx.calendar),
+    href: `/study/${d.assessmentId}`,
+    normCodes: ["N-10", "N-17"],
+    prototypeAssumption: false,
+  }));
 }
 
 function dueTime(item: ActionItem): number {
@@ -283,6 +254,6 @@ export function buildActionFeed(now: Date, ctx: ActionFeedContext): ActionItem[]
     ...scheduleChangeItems(now, ctx),
     ...retakeItems(now, ctx),
     ...applicationItems(now, ctx),
-    ...scholarshipItems(now, ctx),
+    ...debtItems(now, ctx),
   ].sort((a, b) => URGENCY_ORDER[a.urgency] - URGENCY_ORDER[b.urgency] || dueTime(a) - dueTime(b));
 }

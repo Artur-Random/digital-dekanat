@@ -34,6 +34,12 @@ describe("parseNormsRegistry", () => {
     });
   });
 
+  it("сохраняет «Где используется» без отметки «Сверено»", () => {
+    const norms = parseNormsRegistry(REGISTRY);
+    expect(norms.find((n) => n.code === "N-09")?.usedIn).toBe("S3a, счётчик «Попытка 1 из 2».");
+    expect(norms.every((n) => n.usedIn && !n.usedIn.includes("Сверено"))).toBe(true);
+  });
+
   it("падает с понятной ошибкой, если нет цитаты", () => {
     const broken = "## Документ\n\n**N-99.** п. 1, стр. 1\nтекст без цитаты\n";
     expect(() => parseNormsRegistry(broken)).toThrow(NormsRegistryError);

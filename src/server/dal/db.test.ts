@@ -43,6 +43,10 @@ describe("сброс демо-данных", () => {
       debts: 1,
       // Алина: 4 изменения, пересдача, справка, объявление; Денис: изменение и 2 объявления.
       notifications: 10,
+      // 16 текстов правил, по одному на три уровня (задание 5).
+      rules: 16,
+      // Алина: 6 + 5 результатов и 7 дисциплин текущего семестра; Денис: 4 зачёта.
+      assessments: 22,
     };
     expect(await resetDemoData({ today: "2026-11-10" })).toEqual(expected);
     expect(await resetDemoData({ today: "2026-11-10" })).toEqual(expected);

@@ -29,7 +29,15 @@ export default defineConfig({
     // Основной набор: локальный dev или production-сборка с тестовой базой.
     {
       name: "chromium",
-      testIgnore: ["prod-smoke/**"],
+      testIgnore: ["prod-smoke/**", "security/lockout.spec.ts"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // Блокировка входа запирает denis на время теста: запускаем после основного набора,
+    // чтобы не ломать параллельные тесты под denis.
+    {
+      name: "lockout",
+      testMatch: ["security/lockout.spec.ts"],
+      dependencies: ["chromium"],
       use: { ...devices["Desktop Chrome"] },
     },
     // Только неизменяющие проверки без входа против развёрнутого сайта (deploy.yml).

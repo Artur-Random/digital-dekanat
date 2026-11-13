@@ -8,8 +8,13 @@ docs/process/prompts.md
 docs/process/screenshots
 
 # Исходные документы Кирилла и архитектора: форматирование не трогаем.
+# Правило: документы, которые Кирилл загружает через веб-интерфейс GitHub в docs/
+# («Add files via upload»), форматированием не проверяются. Каждый перечисляется здесь явно.
 CLAUDE.md
 docs/spec-v1.md
 docs/norms-registry.md
+docs/pwa-requirements.md
+# Тексты Кирилла, которые переносятся в репозиторий дословно.
+docs/process/design/logo-prompts.md
 dist
 dist-submission

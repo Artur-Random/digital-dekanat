@@ -11,6 +11,7 @@ import { requireStudent, type StudentActor } from "@/server/auth/guards";
 import { getActionFeedContext } from "@/server/dal/action-feed";
 import { listScheduleForStudent } from "@/server/dal/schedule";
 import { listStudentApplications } from "@/server/dal/students";
+import { getRetakeRule } from "@/server/dal/study";
 import { buildActionFeed } from "@/server/rules/action-feed";
 import { parseStages, statusTitle } from "@/server/rules/application-stages";
 import { buildTodayView } from "@/server/rules/schedule";
@@ -28,7 +29,7 @@ async function Today({ actor, now }: { actor: StudentActor; now: Date }) {
     new Date(now.getTime() + 22 * DAY),
   );
   const view = buildTodayView(now, schedule.events, schedule.changes, schedule.calendar);
-  return <TodayBlock view={view} headingLevel={3} />;
+  return <TodayBlock view={view} retakeRule={await getRetakeRule(actor)} headingLevel={3} />;
 }
 
 async function Feed({ actor, now }: { actor: StudentActor; now: Date }) {

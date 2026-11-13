@@ -1,7 +1,7 @@
 // Реестр экранов для smoke-тестов и автоскриншотов. Коды экранов из docs/spec-v1.md, раздел 2.
 // Новый экран добавляется сюда, и он автоматически попадает в тесты и скриншоты.
 
-import { applicationId } from "./helpers/db";
+import { applicationId, currentAssessmentOf, debtOf } from "./helpers/db";
 
 export type ScreenRole = "anonymous" | "student" | "staff";
 
@@ -40,6 +40,24 @@ export const SCREENS: readonly Screen[] = [
   },
   { code: "S6", slug: "notifications", path: "/notifications", role: "student", account: "alina" },
   { code: "S8", slug: "why", path: "/why", role: "student", account: "alina" },
+  { code: "S8", slug: "why-search", path: "/why?q=7.3", role: "student", account: "alina" },
+  { code: "S3", slug: "study", path: "/study", role: "student", account: "alina" },
+  {
+    code: "S3a",
+    slug: "discipline-debt",
+    path: async () => `/study/${(await debtOf("alina")).assessmentId}`,
+    role: "student",
+    account: "alina",
+    iphone: true,
+  },
+  {
+    code: "S3a",
+    slug: "discipline-current",
+    path: async () => `/study/${(await currentAssessmentOf("alina", "EXAM")).id}`,
+    role: "student",
+    account: "alina",
+  },
+  { code: "S3", slug: "study-denis", path: "/study", role: "student", account: "denis" },
   { code: "S1", slug: "home-denis", path: "/", role: "student", account: "denis" },
   { code: "S2", slug: "schedule-denis", path: "/schedule", role: "student", account: "denis" },
   { code: "S4", slug: "applications", path: "/applications", role: "student", account: "alina" },

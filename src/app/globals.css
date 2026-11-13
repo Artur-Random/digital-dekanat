@@ -23,6 +23,12 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Высота зоны под статус-баром. Через переменную, чтобы тест мог задать её явно:
+   в эмуляции Playwright env(safe-area-inset-top) всегда 0. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
 body {
   background-color: var(--color-surface);
   color: var(--color-ink);
@@ -41,7 +47,21 @@ body {
 }
 
 @utility safe-top {
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-top);
+}
+
+/* Сплошная полоска под статус-баром в режиме «На экран Домой»: контент при прокрутке
+   уходит под неё, а не под часы. Без прозрачности и backdrop-filter. Цвет плашки концепта,
+   поэтому полоска и плашка выглядят одним блоком. В обычном браузере высота 0. */
+@utility status-bar-shield {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 60;
+  height: var(--safe-top);
+  background-color: var(--color-notice);
+  pointer-events: none;
 }
 
 @utility safe-bottom {

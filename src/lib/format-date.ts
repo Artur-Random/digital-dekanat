@@ -74,3 +74,20 @@ export function pluralDays(n: number): string {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} дня`;
   return `${n} дней`;
 }
+
+const dayMonthYearUtc = new Intl.DateTimeFormat("ru-RU", {
+  timeZone: "UTC",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+/** «ГГГГ-ММ-ДД» → «15 июня 2027» (без «г.»). */
+export function formatDateKeyWithYear(key: string): string {
+  return dayMonthYearUtc.format(new Date(`${key}T12:00:00Z`)).replace(/\s*г\.$/, "");
+}
+
+/** «18 ноября» в текущем году, «15 июня 2027» — в другом (формат CLAUDE.md, год только по делу). */
+export function formatDateKeySmart(key: string, today: string): string {
+  return key.slice(0, 4) === today.slice(0, 4) ? formatDateKey(key) : formatDateKeyWithYear(key);
+}

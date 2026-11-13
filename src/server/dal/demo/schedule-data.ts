@@ -35,6 +35,15 @@ export const DISCIPLINES = {
   personality: "Современные теории развития личности",
   counseling: "Практикум по психологическому консультированию",
   qualitative: "Качественные методы в психологии",
+  // Прошлые семестры Алины (задание 5).
+  intro: "Введение в профессию психолога",
+  history: "История психологии",
+  philosophy: "Философия",
+  itPsy: "Информационные технологии в психологии",
+  russian: "Русский язык и культура речи",
+  personality2: "Психология личности",
+  sociology: "Социология",
+  research: "Основы научно-исследовательской работы",
 } as const;
 
 export type DisciplineKey = keyof typeof DISCIPLINES;

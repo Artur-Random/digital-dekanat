@@ -1,10 +1,18 @@
 import { formatDateKeyLong } from "@/lib/format-date";
 import type { TodayView } from "@/server/rules/schedule";
 
-import { ScheduleItemView } from "./ScheduleItemView";
+import { type RetakeRule, ScheduleItemView } from "./ScheduleItemView";
 
 /** Пары ближайшего учебного дня: «Сегодня» на главной и во вкладке расписания. */
-export function TodayBlock({ view, headingLevel = 2 }: { view: TodayView; headingLevel?: 2 | 3 }) {
+export function TodayBlock({
+  view,
+  retakeRule,
+  headingLevel = 2,
+}: {
+  view: TodayView;
+  retakeRule: RetakeRule;
+  headingLevel?: 2 | 3;
+}) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   return (
     <div data-testid="today-block" data-date={view.date}>
@@ -36,7 +44,7 @@ export function TodayBlock({ view, headingLevel = 2 }: { view: TodayView; headin
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {view.items.map((item) => (
-            <ScheduleItemView key={item.anchor} item={item} />
+            <ScheduleItemView key={item.anchor} item={item} retakeRule={retakeRule} />
           ))}
         </ul>
       )}

@@ -17,7 +17,16 @@ function place(item: ScheduleItem): string {
 }
 
 /** Одна пара. Значение передаётся текстом (метки «Отменена», «Изменено»), а не только цветом. */
-export function ScheduleItemView({ item }: { item: ScheduleItem }) {
+/** Текст правила о пересдаче из таблицы Rule (RETAKE_SCHEDULE_LOCKED, N-15). */
+export type RetakeRule = { text: string; normCodes: string[] } | null;
+
+export function ScheduleItemView({
+  item,
+  retakeRule,
+}: {
+  item: ScheduleItem;
+  retakeRule: RetakeRule;
+}) {
   const pairLabel = item.pair === null ? "" : `${item.pair} пара · `;
 
   if (item.kind === "moved-away") {
@@ -26,7 +35,7 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
         id={item.anchor}
         data-testid="schedule-item"
         data-kind="moved-away"
-        className="border-border text-ink-muted scroll-mt-24 rounded-md border border-dashed p-3"
+        className="border-border text-ink-muted scroll-mt-[calc(6rem+var(--safe-top))] rounded-md border border-dashed p-3"
       >
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span>
@@ -55,7 +64,7 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
       data-kind={item.isRetake ? "retake" : "event"}
       data-status={item.status}
       data-pair={item.pair ?? undefined}
-      className={`scroll-mt-24 rounded-md border p-3 ${
+      className={`scroll-mt-[calc(6rem+var(--safe-top))] rounded-md border p-3 ${
         item.isRetake ? "border-warn bg-notice" : "border-border"
       } ${item.status === "now" ? "border-l-accent border-l-4" : ""} ${
         item.status === "past" ? "text-ink-muted" : ""
@@ -108,10 +117,12 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
       {item.reason && (changed || item.cancelled) ? (
         <p className="text-ink-muted mt-1 text-sm">Причина: {item.reason}</p>
       ) : null}
-      {item.isRetake ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <span>Дату и время пересдачи менять нельзя</span>
-          <NormChip code="N-15" />
+      {item.isRetake && retakeRule ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" data-testid="retake-rule">
+          <span>{retakeRule.text}</span>
+          {retakeRule.normCodes.map((code) => (
+            <NormChip key={code} code={code} />
+          ))}
         </div>
       ) : null}
     </li>
