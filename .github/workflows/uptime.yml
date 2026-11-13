@@ -9,6 +9,7 @@ on:
   schedule:
     # Hourly while the repository is private (2000 Actions minutes per month).
     # After the repository becomes public, switch to "*/15 * * * *".
+    # GitHub delays or drops scheduled runs under load: in practice gaps were 5-7 hours.
     - cron: "17 * * * *"
   workflow_dispatch:
 
@@ -31,7 +32,11 @@ jobs:
         id: probe
         run: |
           if [ -z "$SITE_URL" ]; then
-            echo "SITE_URL не задан, проверка пропущена" | tee -a "$GITHUB_STEP_SUMMARY"
+            # A skip is green, so it must not look like a successful check: an annotation
+            # on the run page and a heading in the summary.
+            echo "::warning title=uptime: проверка пропущена::SITE_URL не задан, сайт не проверялся"
+            echo "### ⚠️ Проверка пропущена: не задана переменная SITE_URL, сайт не проверялся" \
+              >> "$GITHUB_STEP_SUMMARY"
             echo "state=skip" >> "$GITHUB_OUTPUT"; exit 0
           fi
           body=""
@@ -60,10 +65,11 @@ jobs:
           if [ -n "$problem" ]; then
             echo "state=fail" >> "$GITHUB_OUTPUT"
             echo "problem=$problem" >> "$GITHUB_OUTPUT"
-            echo "Сбой: $problem" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "Сбой: $problem"; echo "### ❌ Сбой: $problem" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "state=ok" >> "$GITHUB_OUTPUT"
-            echo "OK: db ok, version ${version:-?}" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "OK: db ok, version ${version:-?}"
+            echo "### ✅ $SITE_URL: db ok, version ${version:-?}" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Open, comment or close the uptime issue
