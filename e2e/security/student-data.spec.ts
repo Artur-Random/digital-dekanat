@@ -80,7 +80,13 @@ test("alina отмечает прочитанным уведомление Де�
 for (const staff of ["mfc", "dekanat"] as const) {
   test(`${staff} не открывает страницы студента: 404`, async ({ page }) => {
     await loginAs(page, staff);
-    for (const path of ["/", "/schedule", "/notifications"]) {
+    for (const path of [
+      "/",
+      "/schedule",
+      "/schedule?view=week",
+      "/notifications",
+      "/applications/new",
+    ]) {
       const response = await page.goto(path);
       expect(response?.status(), path).toBe(404);
     }

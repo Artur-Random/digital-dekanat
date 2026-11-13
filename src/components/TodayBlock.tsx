@@ -18,9 +18,18 @@ export function TodayBlock({ view, headingLevel = 2 }: { view: TodayView; headin
           </Heading>
         </>
       ) : (
-        <Heading className="text-ink-muted text-base font-normal">
-          {formatDateKeyLong(view.date)}
-        </Heading>
+        <>
+          <Heading className="text-ink-muted text-base font-normal">
+            {formatDateKeyLong(view.date)}
+          </Heading>
+          {view.items.every(
+            (i) => i.status !== "now" && i.status !== "next" && i.status !== "upcoming",
+          ) ? (
+            <p className="mt-1 font-medium" data-testid="day-over">
+              Пары на сегодня закончились
+            </p>
+          ) : null}
+        </>
       )}
       {view.items.length === 0 ? (
         <p className="text-ink-muted mt-3">Расписание на ближайшие дни ещё не опубликовано.</p>

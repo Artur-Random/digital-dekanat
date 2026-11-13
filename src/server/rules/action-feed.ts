@@ -244,7 +244,7 @@ function scholarshipItems(now: Date, ctx: ActionFeedContext): ActionItem[] {
       {
         kind: "scholarship-window",
         title: "Открыт приём документов на повышенную стипендию",
-        details: `Документы о достижениях принимаются до ${formatDateKey(open.closes)}`,
+        details: `Документы, подтверждающие право на стипендию, принимаются до ${formatDateKey(open.closes)}`,
         dueAt: { kind: "date", date: open.closes },
         urgency: urgencyFor(open.closes, today, ctx.calendar),
         href,

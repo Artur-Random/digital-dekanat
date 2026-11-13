@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { requireUser } from "@/server/auth/guards";
 
 // Экраны для студента и сотрудника (S8 «Почему так»). Каждая страница вызывает requireUser() сама.
+// Без нижней панели вкладок: S8 — справочный вложенный экран, выход через «Назад» и логотип.
 export default async function SharedLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   return (
@@ -18,7 +19,10 @@ export default async function SharedLayout({ children }: { children: React.React
           </Link>
         </div>
       </header>
-      <main id="main" className="safe-x safe-bottom mx-auto w-full max-w-5xl flex-1 pt-6 pb-8">
+      <main
+        id="main"
+        className="safe-x mx-auto w-full max-w-5xl flex-1 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+      >
         {children}
       </main>
     </div>

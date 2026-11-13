@@ -67,7 +67,9 @@ export function planScheduleChange(
   calendar: ProductionCalendar,
 ): ScheduleChangePlan {
   const movesTime = patch.date !== undefined || patch.pair !== undefined;
-  if (isRetake(event.type) && (movesTime || patch.cancel)) {
+  // N-15 разрешает у пересдачи только замену преподавателя и формат: аудиторию, дату, время
+  // и отмену менять нельзя.
+  if (isRetake(event.type) && (movesTime || patch.cancel || patch.room !== undefined)) {
     throw new ScheduleDomainError(
       "RETAKE_LOCKED",
       "Дату и время пересдачи менять нельзя (N-15): допускается только замена преподавателя и формат проведения.",

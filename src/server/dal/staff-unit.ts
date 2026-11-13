@@ -11,5 +11,5 @@ import type { DbTx } from "./client";
  */
 export async function requireDekanat(tx: DbTx, actor: StaffActor): Promise<void> {
   const unit = await tx.unit.findUnique({ where: { id: actor.unitId }, select: { code: true } });
-  if (unit?.code !== "DEKANAT") throw new ScheduleDomainError("NOT_FOUND", "Пара не найдена.");
+  if (unit?.code !== "DEKANAT") throw new ScheduleDomainError("NOT_FOUND", "Не найдено.");
 }

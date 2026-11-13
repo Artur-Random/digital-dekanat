@@ -11,6 +11,11 @@ import { buildActionFeed } from "@/server/rules/action-feed";
 import { buildTodayView } from "@/server/rules/schedule";
 import { ScheduleDomainError } from "@/server/rules/schedule-change";
 import { buildCalendar, subtractWorkingDays } from "@/server/rules/working-days";
+import {
+  notifyStudentAboutApplication,
+  publishAnnouncement,
+  publishRetakeSchedule,
+} from "@/server/services/notifications";
 import { createScheduleChange } from "@/server/services/schedule";
 
 import { getActionFeedContext } from "./action-feed";
@@ -197,5 +202,31 @@ describe("createScheduleChange", () => {
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("уведомления: только своё подразделение", () => {
+  it("МФЦ не публикует объявления и расписание пересдач; деканат не уведомляет о справке МФЦ", async () => {
+    const mfc = await staffActor("mfc");
+    const dekanat = await staffActor("dekanat");
+    const before = await getDb().notification.count();
+    await expect(
+      publishAnnouncement(mfc, { groupCodes: ["ПС-251"], title: "Тест", body: "Тест объявления" }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const retake = await getDb().scheduleEvent.findFirstOrThrow({
+      where: { type: "RETAKE_1" },
+      select: { id: true },
+    });
+    await expect(publishRetakeSchedule(mfc, retake.id)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const cert = await getDb().application.findFirstOrThrow({
+      where: { unit: { code: "MFC" } },
+      select: { id: true },
+    });
+    await expect(notifyStudentAboutApplication(dekanat, cert.id)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await getDb().notification.count()).toBe(before);
   });
 });

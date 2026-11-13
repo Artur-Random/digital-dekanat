@@ -28,11 +28,16 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
         data-kind="moved-away"
         className="border-border text-ink-muted scroll-mt-24 rounded-md border border-dashed p-3"
       >
-        <p className="text-sm">
-          {pairLabel}
-          {item.start}–{item.end}
-        </p>
-        <p className="font-medium line-through">{item.discipline}</p>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span>
+            {pairLabel}
+            {item.start}–{item.end}
+          </span>
+          <span className="border-ink-muted rounded border px-2 py-0.5 font-semibold">
+            Перенесена
+          </span>
+        </div>
+        <p className="mt-1 font-medium line-through">{item.discipline}</p>
         <p className="mt-1 text-sm" data-testid="moved-to">
           {item.movedTo ? `Перенесена на ${formatSlot(item.movedTo)}` : "Перенесена"}
           {item.reason ? `. Причина: ${item.reason}` : ""}

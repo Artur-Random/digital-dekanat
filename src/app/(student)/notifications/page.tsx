@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { BackButton } from "@/components/BackButton";
+import { NormChip } from "@/components/NormChip";
 import { formatDay, formatTime } from "@/lib/format-date";
 import { toDateKey } from "@/lib/moscow-date";
 import { requireStudent } from "@/server/auth/guards";
@@ -9,6 +10,10 @@ import { listNotifications } from "@/server/dal/notifications";
 import { markAllRead, openNotification } from "./actions";
 
 export const metadata: Metadata = { title: "Уведомления" };
+
+function normCodes(text: string): string[] {
+  return [...new Set(text.match(/N-\d+/g) ?? [])];
+}
 
 export default async function NotificationsPage() {
   const actor = await requireStudent();
@@ -39,15 +44,18 @@ export default async function NotificationsPage() {
         ) : null}
       </div>
       {notifications.length === 0 ? (
-        <p className="text-ink-muted mt-4">Уведомлений пока нет.</p>
+        <p className="text-ink-muted mt-4">
+          Уведомлений пока нет. Сюда придут изменения расписания, пересдачи, статусы заявок и
+          объявления деканата.
+        </p>
       ) : (
         <div className="mt-4 flex flex-col gap-6">
           {[...groups.values()].map((items) => {
             const first = items[0];
             if (!first) return null;
             return (
-              <section key={first.id} aria-label={formatDay(first.createdAt)}>
-                <h2 className="text-ink-muted text-sm font-semibold">
+              <section key={first.id} aria-labelledby={`day-${first.id}`}>
+                <h2 id={`day-${first.id}`} className="text-ink-muted text-sm font-semibold">
                   {formatDay(first.createdAt)}
                 </h2>
                 <ul className="mt-2 flex flex-col gap-2">
@@ -77,6 +85,14 @@ export default async function NotificationsPage() {
                           <span className="text-ink-muted mt-1 block text-sm">{n.body}</span>
                         </button>
                       </form>
+                      {/* Коды норм из текста — ссылками на «Почему так»: внутрь кнопки ссылку не вложить. */}
+                      {normCodes(n.body).length > 0 ? (
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {normCodes(n.body).map((code) => (
+                            <NormChip key={code} code={code} />
+                          ))}
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
