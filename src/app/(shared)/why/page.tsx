@@ -26,7 +26,7 @@ export default async function WhyPage() {
               key={n.code}
               id={n.code}
               data-testid="norm"
-              className="border-border target:border-accent scroll-mt-4 rounded-md border p-4 [overflow-wrap:anywhere] target:border-2"
+              className="border-border target:border-accent scroll-mt-[calc(1rem+var(--safe-top))] rounded-md border p-4 [overflow-wrap:anywhere] target:border-2"
             >
               <h2 className="font-semibold">{n.code}</h2>
               <p className="text-ink-muted text-sm">

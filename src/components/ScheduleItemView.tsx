@@ -26,7 +26,7 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
         id={item.anchor}
         data-testid="schedule-item"
         data-kind="moved-away"
-        className="border-border text-ink-muted scroll-mt-24 rounded-md border border-dashed p-3"
+        className="border-border text-ink-muted scroll-mt-[calc(6rem+var(--safe-top))] rounded-md border border-dashed p-3"
       >
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span>
@@ -55,7 +55,7 @@ export function ScheduleItemView({ item }: { item: ScheduleItem }) {
       data-kind={item.isRetake ? "retake" : "event"}
       data-status={item.status}
       data-pair={item.pair ?? undefined}
-      className={`scroll-mt-24 rounded-md border p-3 ${
+      className={`scroll-mt-[calc(6rem+var(--safe-top))] rounded-md border p-3 ${
         item.isRetake ? "border-warn bg-notice" : "border-border"
       } ${item.status === "now" ? "border-l-accent border-l-4" : ""} ${
         item.status === "past" ? "text-ink-muted" : ""

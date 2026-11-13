@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   },
   description: "Концепт личного кабинета студента для конкурса MGIMO AI Challenge 2026.",
   robots: { index: false, follow: false },
+  // Статус-бар в режиме «На экран Домой»: тёмный текст. black-translucent даёт белый текст,
+  // он не читается на светло-жёлтой полоске цвета плашки.
+  appleWebApp: { statusBarStyle: "default", title: "Студкаб" },
 };
 
 export const viewport: Viewport = {
@@ -34,6 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         >
           Перейти к содержимому
         </a>
+        <div aria-hidden="true" data-testid="status-bar-shield" className="status-bar-shield" />
         <ConceptBanner />
         <NavTracker />
         {children}
