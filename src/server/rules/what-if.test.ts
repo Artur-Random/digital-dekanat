@@ -16,6 +16,7 @@ const rules: RuleText[] = RULES.map((r) => ({
   body: r.body,
   normCodes: r.normCodes,
   stipendOnly: r.stipendOnly,
+  prototypeAssumption: r.prototypeAssumption,
 }));
 const budget = { studyForm: "FULL_TIME" as const, funding: "BUDGET" as const };
 const contract = { studyForm: "FULL_TIME" as const, funding: "CONTRACT" as const };
@@ -111,6 +112,7 @@ describe("whatIfScenarios", () => {
         body: "МАРКЕР {deadline}",
         normCodes: ["N-08"],
         stipendOnly: false,
+        prototypeAssumption: false,
       },
     ];
     const s = whatIfScenarios({
@@ -163,11 +165,21 @@ describe("whatIfScenarios", () => {
     expect(s.flatMap((x) => x.items.map((i) => i.trigger))).not.toContain("ACADEMIC_LEAVE_NO_STAY");
   });
 
-  it("у каждого правила есть нормы реестра, у стипендийных — N-20/N-21/N-23/N-29", () => {
+  it("у каждого правила есть нормы реестра или пометка «так устроено в прототипе»; 4 уровня", () => {
     for (const r of RULES) {
-      expect(r.normCodes.length, r.trigger).toBeGreaterThan(0);
-      expect(r.levels).toEqual(["BACHELOR", "MASTER", "SPECIALIZED_MASTER"]);
-      expect(r.verified).toBe(false);
+      expect(r.normCodes.length > 0 || r.prototypeAssumption, r.trigger).toBe(true);
+      expect(r.levels).toEqual(["BACHELOR", "MASTER", "SPECIALIZED_MASTER", "BASIC_HE"]);
     }
+  });
+
+  it("сверка Кириллом 14.11.2026: verified у всех, кроме окна стипендии и нового текста", () => {
+    const unverified = RULES.filter((r) => !r.verified).map((r) => r.trigger);
+    expect(unverified.sort()).toEqual(["RAISED_STIPEND_WINDOW", "STIPEND_AFTER_LIQUIDATION"]);
+  });
+
+  it("№7: пересдача ограничивает только стипендию за отличную учёбу (п. 4.4.1, N-23)", () => {
+    const r = RULES.find((x) => x.trigger === "RETAKE_RAISED_STIPEND");
+    expect(r?.body).toContain("за отличную учёбу");
+    expect(r?.body).toContain("Достижения в проектах и олимпиадах это не отменяет.");
   });
 });

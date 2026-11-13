@@ -4,7 +4,7 @@ import { GRADE_BANDS } from "@/server/dal/demo/grade-bands";
 
 import { gradeFor } from "./grades";
 
-const LEVELS = ["BACHELOR", "MASTER", "SPECIALIZED_MASTER"] as const;
+const LEVELS = ["BACHELOR", "MASTER", "SPECIALIZED_MASTER", "BASIC_HE"] as const;
 
 describe("gradeFor (N-02, N-03)", () => {
   for (const level of LEVELS) {

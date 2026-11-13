@@ -160,16 +160,15 @@ async function seedRules(tx: Tx, ctx: SeedContext): Promise<void> {
       if (!id) throw new Error(`Нет уровня ${code}`);
       return id;
     });
-    const [first] = levelIds;
-    if (!first) throw new Error(`У правила ${r.trigger} нет уровней`);
+    if (levelIds.length === 0) throw new Error(`У правила ${r.trigger} нет уровней`);
     await tx.rule.create({
       data: {
-        levelId: first,
         trigger: r.trigger,
         title: r.title,
         body: r.body,
         normCodes: r.normCodes,
         stipendOnly: r.stipendOnly,
+        prototypeAssumption: r.prototypeAssumption,
         verified: r.verified,
         levels: { connect: levelIds.map((id) => ({ id })) },
       },

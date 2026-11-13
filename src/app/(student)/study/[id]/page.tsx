@@ -182,7 +182,12 @@ export default async function DisciplinePage({ params }: Props) {
                     className="border-border rounded-md border p-3"
                     data-trigger={item.trigger}
                   >
-                    <RuleText text={item.text} normCodes={item.normCodes} norms={norms} />
+                    <RuleText
+                      text={item.text}
+                      normCodes={item.normCodes}
+                      norms={norms}
+                      prototypeAssumption={item.prototypeAssumption}
+                    />
                   </li>
                 ))}
               </ul>

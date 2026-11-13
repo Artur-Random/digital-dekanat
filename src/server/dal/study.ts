@@ -48,7 +48,14 @@ async function bandsFor(actor: StudentActor): Promise<GradeBandInput[]> {
 export async function getRulesForStudent(actor: StudentActor): Promise<RuleText[]> {
   const rows = await getDb().rule.findMany({
     where: { levels: { some: { code: actor.levelCode } } },
-    select: { trigger: true, title: true, body: true, normCodes: true, stipendOnly: true },
+    select: {
+      trigger: true,
+      title: true,
+      body: true,
+      normCodes: true,
+      stipendOnly: true,
+      prototypeAssumption: true,
+    },
   });
   return rows;
 }
