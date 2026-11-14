@@ -27,7 +27,7 @@ describe("сброс демо-данных", () => {
       holidays: HOLIDAYS.length,
       // 4 уровня × (4 оценки экзамена + 4 дифзачёта + 2 зачёта)
       gradeBands: 40,
-      norms: 46,
+      norms: 47,
       applicationTypes: APPLICATION_TYPES.length,
       users: STUDENTS.length + STAFF.length,
       students: 2,

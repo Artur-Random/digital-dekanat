@@ -1829,3 +1829,9 @@ verified=true ставь текстам 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 15,
 
 В конце добавь запись в PROCESS.md.
 ~~~~
+
+### 2026-11-14 16:35 МСК
+
+~~~~
+@"/root/.claude/uploads/2a68b7ba-8c78-518b-9baf-6b384f64003e/779ef61a-Polozhenie-o-stipendialnom-obespechenii-i-drugih-formah-materialnoj-podderzhki-obuchayushhihsya-po-programmam-VO-Prikaz-33obshh-ot-26.01.2026.pdf" 33общ
+~~~~

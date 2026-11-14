@@ -181,5 +181,6 @@ describe("whatIfScenarios", () => {
     const r = RULES.find((x) => x.trigger === "RETAKE_RAISED_STIPEND");
     expect(r?.body).toContain("не менее двух сессий подряд сданы только на «отлично» (п. 4.4.1)");
     expect(r?.body).toContain("(пп. 4.4.2, 4.4.3)");
+    expect(r?.normCodes).toEqual(["N-18", "N-23", "N-30"]);
   });
 });
