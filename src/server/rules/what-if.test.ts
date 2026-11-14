@@ -172,14 +172,14 @@ describe("whatIfScenarios", () => {
     }
   });
 
-  it("сверка Кириллом 14.11.2026: verified у всех, кроме нового текста №17", () => {
+  it("сверка Кириллом 14.11.2026: verified у всех 17 текстов", () => {
     const unverified = RULES.filter((r) => !r.verified).map((r) => r.trigger);
-    expect(unverified).toEqual(["STIPEND_AFTER_LIQUIDATION"]);
+    expect(unverified).toEqual([]);
   });
 
   it("№7: пересдача ограничивает только стипендию за отличную учёбу (п. 4.4.1, N-23)", () => {
     const r = RULES.find((x) => x.trigger === "RETAKE_RAISED_STIPEND");
-    expect(r?.body).toContain("за отличную учёбу");
-    expect(r?.body).toContain("Достижения в проектах и олимпиадах это не отменяет.");
+    expect(r?.body).toContain("не менее двух сессий подряд сданы только на «отлично» (п. 4.4.1)");
+    expect(r?.body).toContain("(пп. 4.4.2, 4.4.3)");
   });
 });
