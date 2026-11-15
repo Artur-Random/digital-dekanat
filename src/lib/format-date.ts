@@ -91,3 +91,12 @@ export function formatDateKeyWithYear(key: string): string {
 export function formatDateKeySmart(key: string, today: string): string {
   return key.slice(0, 4) === today.slice(0, 4) ? formatDateKey(key) : formatDateKeyWithYear(key);
 }
+
+/** 1 рабочий день, 2 рабочих дня, 5 рабочих дней. */
+export function pluralWorkingDays(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} рабочий день`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} рабочих дня`;
+  return `${n} рабочих дней`;
+}

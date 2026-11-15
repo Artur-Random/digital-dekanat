@@ -123,6 +123,16 @@ async function Summary({ actor }: { actor: StudentActor }) {
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
               </Link>
             ) : null}
+            {nearest?.assessmentId ? (
+              <Link
+                href={`/study/${nearest.assessmentId}`}
+                data-testid="debt-what-if"
+                className="bg-accent text-accent-ink mt-2 inline-flex min-h-11 items-center gap-1 rounded-md px-4 font-medium"
+              >
+                Что будет, если…
+                <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
+              </Link>
+            ) : null}
             <NormQuotes codes={["N-10"]} norms={norms} />
           </>
         )}
@@ -191,6 +201,9 @@ async function Semester({
           const result =
             a.score === null ? null : gradeFor(a.score, a.controlForm, actor.levelCode, bands);
           const isDebt = result !== null && !result.isPositive;
+          // Вход в S3a «Что будет, если…» заметен там, где есть последствия: долг, тройка,
+          // контроль ещё впереди (замечание Максима, #34).
+          const whatIf = isDebt || result === null || result.grade === "SATISFACTORY";
           return (
             <li key={a.id}>
               <Link
@@ -217,6 +230,14 @@ async function Semester({
                       : ` · ${formatDayTime(a.date)}`}
                     {a.attempt > 0 ? ` · пересдача, попытка ${a.attempt}` : ""}
                   </span>
+                  {whatIf ? (
+                    <span
+                      className="text-accent mt-1 block font-medium"
+                      data-testid="what-if-entry"
+                    >
+                      Что будет, если…
+                    </span>
+                  ) : null}
                 </span>
                 <ChevronRight aria-hidden="true" className="size-5 shrink-0" />
               </Link>

@@ -76,10 +76,7 @@ export function whatIfScenarios(input: WhatIfInput): Scenario[] {
       title: "Что сейчас",
       items: [
         ...(timeline.stage === "STAGE_1"
-          ? item("DEBT_STAGE_1", {
-              discipline: input.discipline,
-              attempt: String(timeline.nextAttempt ?? 2),
-            })
+          ? item("DEBT_STAGE_1", { discipline: input.discipline })
           : item("DEBT_STAGE_2")),
         ...(retake ? [] : item("RETAKE_SCHEDULE_PUBLISH")),
         ...item("STIPEND_STOPPED", {
@@ -121,7 +118,7 @@ export function whatIfScenarios(input: WhatIfInput): Scenario[] {
         }),
         actions: [
           { label: "Пересдача в расписании", href: scheduleLink(day, retake.id) },
-          { label: "Не смогу прийти", href: "/cant-attend" },
+          { label: "Не смогу прийти", href: `/cant-attend?event=${retake.id}` },
         ],
       });
     }

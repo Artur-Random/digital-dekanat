@@ -48,7 +48,7 @@ test("alina: S3a задолженности — этап I, попытка, ср
     .getByTestId("debt-timeline")
     .locator('[data-testid="norm-quote"][data-code="N-10"]');
   await expect(quote.locator("blockquote")).toBeHidden();
-  await quote.getByLabel("Норма N-10: показать цитату").click();
+  await quote.getByLabel("426общ, п. 7.4: показать цитату").click();
   await expect(quote.locator("blockquote")).toContainText("7.4 Повторная промежуточная аттестация");
   await expect(quote.getByRole("link", { name: "Открыть в «Почему так»" })).toHaveAttribute(
     "href",
@@ -57,7 +57,7 @@ test("alina: S3a задолженности — этап I, попытка, ср
   await expect(page.getByRole("link", { name: "Пересдача в расписании" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Не смогу прийти" })).toHaveAttribute(
     "href",
-    "/cant-attend",
+    /^\/cant-attend\?event=c[a-z0-9]+$/,
   );
 });
 
@@ -98,12 +98,44 @@ test("denis: /study без стипендии и сценариев о ней, �
 test("/why: поиск по «7.3» находит N-09, «Где используется» не пустое", async ({ page }) => {
   await loginAs(page, "alina");
   await page.goto("/why");
-  await page.getByLabel("Поиск по коду, документу или тексту").fill("7.3");
+  await page.getByLabel("Поиск по документу, пункту или тексту").fill("7.3");
   const n09 = page.locator("#N-09");
   await expect(n09).toBeVisible();
   await expect(n09.getByTestId("used-in")).toContainText("Где используется:");
   await expect(n09.getByTestId("used-in")).not.toHaveText("Где используется:");
   await expect(page.locator("#N-29")).toHaveCount(0);
-  await page.getByLabel("Поиск по коду, документу или тексту").fill("нет-такой-нормы");
+  await page.getByLabel("Поиск по документу, пункту или тексту").fill("нет-такой-нормы");
   await expect(page.getByText("Ничего не найдено. Попробуйте другой запрос.")).toBeVisible();
+});
+
+test("чип нормы ведёт к нужной норме: прокрутка и подсветка, на экране нет кода N-xx", async ({
+  page,
+}) => {
+  const debt = await debtOf("alina");
+  await loginAs(page, "alina");
+  await page.goto(`/study/${debt.assessmentId}`);
+  const quote = page
+    .getByTestId("debt-timeline")
+    .locator('[data-testid="norm-quote"][data-code="N-10"]');
+  await expect(quote.locator("summary")).toHaveText("426общ, п. 7.4");
+  await quote.locator("summary").click();
+  await quote.getByRole("link", { name: "Открыть в «Почему так»" }).click();
+  await expect(page).toHaveURL(/\/why#N-10$/);
+  const target = page.locator("#N-10");
+  await expect(target).toHaveAttribute("data-flash", "true");
+  await expect(target).toBeInViewport();
+  await expect(target.getByRole("heading")).toHaveText("426общ, п. 7.4");
+  await expect(page.locator("main")).not.toContainText(/\bN-\d+\b/);
+  // Подсветка гаснет через пару секунд.
+  await expect(target).not.toHaveAttribute("data-flash", "true", { timeout: 5000 });
+});
+
+test("вход в «Что будет, если…» заметен с карточки дисциплины с долгом", async ({ page }) => {
+  await loginAs(page, "alina");
+  await page.goto("/study");
+  await expect(page.getByTestId("debt-what-if")).toBeVisible();
+  const debtCard = page.locator('[data-testid="discipline"][data-debt="true"]').first();
+  await expect(debtCard.getByTestId("what-if-entry")).toHaveText("Что будет, если…");
+  await debtCard.click();
+  await expect(page.getByTestId("debt-timeline")).toBeVisible();
 });

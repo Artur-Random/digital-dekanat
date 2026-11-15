@@ -55,7 +55,8 @@ export async function getStudentApplication(actor: StudentActor, id: string) {
       createdAt: true,
       stageDeadline: true,
       willBringOriginal: true,
-      type: { select: { title: true, code: true, stages: true } },
+      formData: true,
+      type: { select: { title: true, code: true, stages: true, requiredDocuments: true } },
       unit: { select: { name: true } },
       events: {
         orderBy: { createdAt: "asc" },

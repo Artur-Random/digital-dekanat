@@ -44,7 +44,7 @@ test("alina: «Сегодня» с «Изменено» и «было → ста
   const feed = page.getByTestId("action-feed");
   await expect(feed).toContainText(`Пересдача по дисциплине «${await retakeDiscipline("alina")}»`);
   await expect(feed).toContainText("Справка готова, забрать в МФЦ");
-  await expect(feed.getByRole("link", { name: "Норма N-14: открыть цитату" })).toBeVisible();
+  await expect(feed.getByRole("link", { name: "426общ, п. 7.13: открыть цитату" })).toBeVisible();
 
   const unread = await unreadCount("alina");
   expect(unread).toBeGreaterThan(0);
@@ -114,7 +114,11 @@ test("/schedule?week=мусор отдаёт 200 и текущую неделю"
     "data-week",
     mondayOf(todayInMoscow()),
   );
+  // Прошедшая неделя без пар: расписание было, пар нет (замечание Максима, #33).
   await page.goto("/schedule?week=2020-01-06");
+  await expect(page.getByTestId("week-empty")).toHaveText("На эту неделю пар нет");
+  // Будущая неделя без пар: расписание ещё не опубликовано.
+  await page.goto("/schedule?week=2099-01-05");
   await expect(page.getByTestId("week-empty")).toHaveText(
     "Расписание на эту неделю ещё не опубликовано",
   );

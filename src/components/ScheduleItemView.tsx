@@ -3,7 +3,7 @@ import { EVENT_TYPE_LABEL, FORMAT_LABEL } from "@/lib/schedule-labels";
 import type { ItemStatus, ScheduleItem } from "@/server/rules/schedule";
 import { describeField } from "@/server/rules/schedule-change";
 
-import { NormChip } from "./NormChip";
+import { NormChip, type NormRef } from "./NormChip";
 
 const STATUS_LABEL: Partial<Record<ItemStatus, string>> = {
   past: "Прошла",
@@ -18,7 +18,7 @@ function place(item: ScheduleItem): string {
 
 /** Одна пара. Значение передаётся текстом (метки «Отменена», «Изменено»), а не только цветом. */
 /** Текст правила о пересдаче из таблицы Rule (RETAKE_SCHEDULE_LOCKED, N-15). */
-export type RetakeRule = { text: string; normCodes: string[] } | null;
+export type RetakeRule = { text: string; norms: NormRef[] } | null;
 
 export function ScheduleItemView({
   item,
@@ -120,8 +120,8 @@ export function ScheduleItemView({
       {item.isRetake && retakeRule ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" data-testid="retake-rule">
           <span>{retakeRule.text}</span>
-          {retakeRule.normCodes.map((code) => (
-            <NormChip key={code} code={code} />
+          {retakeRule.norms.map((n) => (
+            <NormChip key={n.code} code={n.code} label={n.label} />
           ))}
         </div>
       ) : null}

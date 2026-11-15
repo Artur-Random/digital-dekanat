@@ -181,7 +181,7 @@ docs/                      spec, реестр норм, process/, licenses.md
 - `npm run lint`: ESLint без предупреждений.
 - `npm run format`: Prettier, исправляет файлы. `npm run format:check`: только проверка.
 - `npm run test`: unit-тесты Vitest (`src/**/*.test.ts`, `.claude/hooks/*.test.ts`).
-- `npm run test:e2e`: Playwright, проекты `chromium` (всё, кроме `e2e/prod-smoke` и блокировки входа) и `lockout` (`e2e/security/lockout.spec.ts`, после основного набора). Без `BASE_URL` сам поднимает dev-сервер.
+- `npm run test:e2e`: Playwright, проекты `chromium` (всё, кроме `e2e/prod-smoke`, `e2e/flows` и блокировки входа), `flows` (`e2e/flows/`: сквозные сценарии, которые меняют данные, после основного набора, за собой убирают) и `lockout` (`e2e/security/lockout.spec.ts`, после основного набора). Без `BASE_URL` сам поднимает dev-сервер.
 - `npm run test:prod-smoke`: проверки развёрнутого сайта без входа (`BASE_URL`, `SMOKE_WWW_URL`, `EXPECT_VERSION`).
 - `npm run build:tools`: скрипт сброса для образа tools, компиляция в `dist/reset-demo.mjs` (esbuild).
 - `npm run screenshots`: автоскриншоты всех экранов из `e2e/screens.ts` в 360 и 1440 px. Без запущенного сервера сам поднимает `next dev`.

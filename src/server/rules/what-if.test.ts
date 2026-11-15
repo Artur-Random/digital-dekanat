@@ -151,7 +151,7 @@ describe("whatIfScenarios", () => {
     });
     expect(s.map((x) => x.id)).toEqual(["now", "next", "know", "do"]);
     const text = allText(s);
-    expect(text).toContain("впереди попытка 1 из 2");
+    expect(text).toContain("Всего пересдавать можно не больше двух раз.");
     expect(text).toContain("не выплачивается с 1 июля");
     expect(text).toContain("переведены условно");
     expect(text).toContain("до 15 июня 2027");
@@ -179,8 +179,9 @@ describe("whatIfScenarios", () => {
 
   it("№7: пересдача ограничивает только стипендию за отличную учёбу (п. 4.4.1, N-23)", () => {
     const r = RULES.find((x) => x.trigger === "RETAKE_RAISED_STIPEND");
-    expect(r?.body).toContain("не менее двух сессий подряд сданы только на «отлично» (п. 4.4.1)");
-    expect(r?.body).toContain("(пп. 4.4.2, 4.4.3)");
+    // Формулировка Кирилла от 15.11.2026 (замечание Максима, #29).
+    expect(r?.body).toContain("за учёбу только на «отлично» (две сессии подряд и больше)");
+    expect(r?.body).toContain("награды за проекты или победы в олимпиадах и конкурсах");
     expect(r?.normCodes).toEqual(["N-18", "N-23", "N-30"]);
   });
 });

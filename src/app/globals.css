@@ -39,6 +39,34 @@ body {
   outline-offset: 2px;
 }
 
+/* Tailwind 4 оставляет у кнопок обычный курсор: кликабельное должно выглядеть кликабельным. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+/* Норма, к которой перешли по чипу: подсветка на пару секунд (NormsSearch). */
+@keyframes norm-flash {
+  from {
+    background-color: var(--color-notice);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.norm-flash {
+  animation: norm-flash 2.5s ease-out;
+  border-color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .norm-flash {
+    animation: none;
+    background-color: var(--color-notice);
+  }
+}
+
 /* Режим «На экран Домой» (viewport-fit=cover): контент не заходит под вырез, скругления
    и полосу жестов. На обычных экранах env() равно 0 и остаются отступы 1rem. */
 @utility safe-x {
@@ -71,4 +99,14 @@ body {
 /* Основной контент студента: на телефоне под фиксированной нижней панелью (3.5rem + рамка). */
 @utility pb-under-nav {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+/* Кнопка «Вверх»: справа снизу, над нижней панелью вкладок на телефоне и с учётом safe-area. */
+@utility to-top-pos {
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+@utility to-top-above-nav {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom));
 }

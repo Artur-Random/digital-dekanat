@@ -23,7 +23,8 @@ export default async function WhyPage({ searchParams }: Props) {
       <BackButton fallbackHref={user.role === "STAFF" ? "/staff" : "/"} />
       <h1 className="mt-2 text-2xl font-semibold">Почему так</h1>
       <p className="text-ink-muted mt-2">
-        Каждое правило в кабинете ссылается на пункт положения. Здесь — дословные цитаты.
+        Сроки и подсказки в кабинете взяты из положений МГПУ и закона. Здесь пункты, на которых они
+        основаны, дословно.
       </p>
       {norms.length === 0 ? (
         <p className="text-ink-muted mt-4">Реестр норм пока пуст.</p>

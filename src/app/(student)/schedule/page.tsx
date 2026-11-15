@@ -136,7 +136,10 @@ async function Week({
       </div>
       {empty ? (
         <p className="text-ink-muted mt-4" data-testid="week-empty">
-          Расписание на эту неделю ещё не опубликовано
+          {/* Неделя в прошлом или текущая — расписание уже было, пар просто нет. */}
+          {actorWeek > mondayOf(today)
+            ? "Расписание на эту неделю ещё не опубликовано"
+            : "На эту неделю пар нет"}
         </p>
       ) : (
         <div className="mt-4 flex flex-col gap-6">

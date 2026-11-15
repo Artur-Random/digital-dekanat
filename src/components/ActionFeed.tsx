@@ -25,7 +25,14 @@ function dueText(item: ActionItem): string | null {
     : formatDateKey(item.dueAt.date);
 }
 
-export function ActionFeed({ items }: { items: ActionItem[] }) {
+export function ActionFeed({
+  items,
+  normLabels,
+}: {
+  items: ActionItem[];
+  /** Подписи норм «документ, пункт» по коду. */
+  normLabels: ReadonlyMap<string, string>;
+}) {
   if (items.length === 0) {
     return <p className="text-ink-muted">Всё под контролем: новых задач нет</p>;
   }
@@ -58,7 +65,7 @@ export function ActionFeed({ items }: { items: ActionItem[] }) {
             {item.normCodes.length > 0 || item.prototypeAssumption ? (
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 {item.normCodes.map((code) => (
-                  <NormChip key={code} code={code} />
+                  <NormChip key={code} code={code} label={normLabels.get(code) ?? code} />
                 ))}
                 {item.prototypeAssumption ? <PrototypeNote /> : null}
               </div>
