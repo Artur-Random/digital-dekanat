@@ -5,6 +5,8 @@ import Link from "next/link";
 import { formatDateOnly, formatDay } from "@/lib/format-date";
 import { findBranch, isClosed, parseStages, statusTitle } from "@/server/rules/application-stages";
 import { requireStudent } from "@/server/auth/guards";
+import { ApplicationLimitNotice } from "@/components/ApplicationLimitNotice";
+import { getApplicationLimitView } from "@/server/dal/applications";
 import { listStudentApplications } from "@/server/dal/students";
 
 export const metadata: Metadata = { title: "Заявки и справки" };
@@ -42,10 +44,14 @@ function ApplicationList({ items, testId }: { items: Row[]; testId: string }) {
 // S4: активные и архив, кнопка «Новая заявка».
 export default async function ApplicationsPage() {
   const actor = await requireStudent();
-  const applications = await listStudentApplications(actor);
+  const [applications, limit] = await Promise.all([
+    listStudentApplications(actor),
+    getApplicationLimitView(actor),
+  ]);
+  // Та же граница, что у лимита: завершённые — отказ, отмена или пройден последний этап
+  // (готовая справка тоже: решения ждать не нужно).
   const closed = (app: Row) =>
-    isClosed(findBranch(parseStages(app.type.stages), app.branch), app.status) &&
-    app.status !== "READY";
+    isClosed(findBranch(parseStages(app.type.stages), app.branch), app.status);
   const active = applications.filter((a) => !closed(a));
   const archive = applications.filter(closed);
 
@@ -53,15 +59,35 @@ export default async function ApplicationsPage() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Заявки и справки</h1>
-        <Link
-          href="/applications/new"
-          data-testid="new-application"
-          className="bg-accent text-accent-ink inline-flex min-h-11 items-center gap-2 rounded-md px-4 font-medium"
-        >
-          <Plus aria-hidden="true" className="size-5" />
-          Новая заявка
-        </Link>
+        {limit.reached ? (
+          // Неактивная кнопка: ссылки нет, причина рядом и связана через aria-describedby.
+          <span
+            role="link"
+            aria-disabled="true"
+            aria-describedby="limit-note"
+            data-testid="new-application"
+            data-disabled="true"
+            className="bg-surface-muted text-ink-muted border-border inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-md border px-4 font-medium"
+          >
+            <Plus aria-hidden="true" className="size-5" />
+            Новая заявка
+          </span>
+        ) : (
+          <Link
+            href="/applications/new"
+            data-testid="new-application"
+            className="bg-accent text-accent-ink inline-flex min-h-11 items-center gap-2 rounded-md px-4 font-medium"
+          >
+            <Plus aria-hidden="true" className="size-5" />
+            Новая заявка
+          </Link>
+        )}
       </div>
+      {limit.reached ? (
+        <div id="limit-note">
+          <ApplicationLimitNotice text={limit.text} />
+        </div>
+      ) : null}
       {applications.length === 0 ? (
         <p className="text-ink-muted mt-4">
           Заявок пока нет. Нажмите «Новая заявка», чтобы заказать справку или подать заявление.
@@ -81,7 +107,7 @@ export default async function ApplicationsPage() {
           {archive.length > 0 ? (
             <section aria-labelledby="archive-title" className="mt-8">
               <h2 id="archive-title" className="text-lg font-semibold">
-                Архив
+                Завершённые
               </h2>
               <ApplicationList items={archive} testId="applications-archive" />
             </section>

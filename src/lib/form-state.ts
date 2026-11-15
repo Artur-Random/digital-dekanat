@@ -7,6 +7,8 @@ export type FormState = {
   errors?: Record<string, string>;
   message?: string;
   values?: Record<string, string>;
+  /** Сообщение — правило без нормы: рядом пометка «так устроено в прототипе». */
+  prototypeNote?: boolean;
 };
 
 export const EMPTY_FORM_STATE: FormState = {};

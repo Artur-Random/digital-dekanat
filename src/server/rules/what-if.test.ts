@@ -8,6 +8,7 @@ import { debtTimeline } from "./debts";
 import type { RuleText } from "./rule-text";
 import { whatIfScenarios } from "./what-if";
 import { buildCalendar } from "./working-days";
+import { MAX_ACTIVE_APPLICATIONS } from "./application-stages";
 
 const calendar = buildCalendar(HOLIDAYS);
 const rules: RuleText[] = RULES.map((r) => ({
@@ -172,9 +173,20 @@ describe("whatIfScenarios", () => {
     }
   });
 
-  it("сверка Кириллом 14.11.2026: verified у всех 17 текстов", () => {
+  it("сверка Кириллом: verified у всех 18 текстов (лимит заявок — текст Кирилла 15.11)", () => {
     const unverified = RULES.filter((r) => !r.verified).map((r) => r.trigger);
+    expect(RULES).toHaveLength(18);
     expect(unverified).toEqual([]);
+  });
+
+  it("лимит заявок: число в тексте совпадает с проверкой на сервере, пометка прототипа", () => {
+    const r = RULES.find((x) => x.trigger === "APPLICATION_LIMIT");
+    expect(r?.body).toBe(
+      "Можно иметь не больше 5 активных заявок. Дождитесь решения или отмените одну из них.",
+    );
+    expect(r?.body).toContain(`не больше ${MAX_ACTIVE_APPLICATIONS} активных`);
+    expect(r?.prototypeAssumption).toBe(true);
+    expect(r?.normCodes).toEqual([]);
   });
 
   it("№7: пересдача ограничивает только стипендию за отличную учёбу (п. 4.4.1, N-23)", () => {

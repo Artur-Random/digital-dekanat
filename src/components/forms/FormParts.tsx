@@ -68,11 +68,22 @@ export function GroupError({ id, error }: { id: string; error?: string }) {
 
 export const inputClass = "border-ink-muted min-h-11 w-full rounded-md border px-3 py-2";
 
-export function FormMessage({ message }: { message?: string }) {
+export function FormMessage({
+  message,
+  prototypeNote = false,
+}: {
+  message?: string;
+  prototypeNote?: boolean;
+}) {
   return (
-    <p role="alert" className="text-danger min-h-6" data-testid="form-message">
-      {message}
-    </p>
+    <div role="alert" className="min-h-6">
+      <p className="text-danger" data-testid="form-message">
+        {message}
+      </p>
+      {message && prototypeNote ? (
+        <p className="text-ink-muted text-sm italic">так устроено в прототипе</p>
+      ) : null}
+    </div>
   );
 }
 

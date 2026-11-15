@@ -20,7 +20,9 @@ import type { StaffActor, StudentActor } from "@/server/auth/guards";
 import { getDb } from "@/server/db";
 import {
   allowedTransitions,
+  applicationLimitReached,
   canStudentCancel,
+  countActiveApplications,
   findBranch,
   nextStageDeadline,
   parseStages,
@@ -168,13 +170,38 @@ export type NewApplication = {
  * ветка — существовать у типа. Подразделение и срок берутся из типа, не из формы.
  * Возвращает id заявки или null.
  */
+export type CreateResult = { ok: true; id: string } | { ok: false; error: "NOT_FOUND" | "LIMIT" };
+
+async function countActive(tx: DbTx, studentId: string): Promise<number> {
+  const rows = await tx.application.findMany({
+    where: { studentId, status: { notIn: ["REJECTED", "CANCELLED"] } },
+    select: { status: true, branch: true, type: { select: { stages: true } } },
+  });
+  return countActiveApplications(
+    rows.map((r) => ({ status: r.status, branch: r.branch, stages: parseStages(r.type.stages) })),
+  );
+}
+
+/** Сколько активных заявок у студента и достигнут ли лимит (S4, S4a, S5). */
+export async function getApplicationLimit(
+  actor: StudentActor,
+): Promise<{ active: number; reached: boolean }> {
+  const active = await countActive(getDb(), actor.studentId);
+  return { active, reached: applicationLimitReached(active) };
+}
+
 export async function createApplication(
   actor: StudentActor,
   input: NewApplication,
   options: { now?: Date } = {},
-): Promise<string | null> {
+): Promise<CreateResult> {
   const now = options.now ?? new Date();
   return getDb().$transaction(async (tx) => {
+    // Блокировка строки студента: две одновременные подачи не обойдут лимит.
+    await tx.$executeRaw`SELECT 1 FROM "StudentProfile" WHERE "id" = ${actor.studentId} FOR UPDATE`;
+    if (applicationLimitReached(await countActive(tx, actor.studentId))) {
+      return { ok: false, error: "LIMIT" };
+    }
     const type = await tx.applicationType.findFirst({
       where: {
         code: input.typeCode,
@@ -183,9 +210,9 @@ export async function createApplication(
       },
       select: { id: true, unitId: true, stages: true },
     });
-    if (!type) return null;
+    if (!type) return { ok: false, error: "NOT_FOUND" };
     const branch = findBranch(parseStages(type.stages), input.branch);
-    if (!branch) return null;
+    if (!branch) return { ok: false, error: "NOT_FOUND" };
     const calendar = await loadCalendar(tx);
     const today = toDateKey(now);
     const deadline = nextStageDeadline(
@@ -216,7 +243,7 @@ export async function createApplication(
       },
       select: { id: true },
     });
-    return app.id;
+    return { ok: true, id: app.id };
   });
 }
 
@@ -318,4 +345,18 @@ export async function changeApplicationStatus(
     });
     return { ok: true };
   });
+}
+
+/** Лимит и текст правила о нём (APPLICATION_LIMIT) для экранов S4, S4a, S5. */
+export async function getApplicationLimitView(
+  actor: StudentActor,
+): Promise<{ active: number; reached: boolean; text: string }> {
+  const [limit, rule] = await Promise.all([
+    getApplicationLimit(actor),
+    getDb().rule.findFirst({
+      where: { trigger: "APPLICATION_LIMIT", levels: { some: { code: actor.levelCode } } },
+      select: { body: true },
+    }),
+  ]);
+  return { ...limit, text: rule?.body ?? "" };
 }

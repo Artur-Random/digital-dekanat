@@ -8,11 +8,13 @@ import { formatDayTime } from "@/lib/format-date";
 import type { FormState } from "@/lib/form-state";
 import { toDateKey } from "@/lib/moscow-date";
 import { EVENT_TYPE_LABEL } from "@/lib/schedule-labels";
-import { requireStudent } from "@/server/auth/guards";
+import { type StudentActor, requireStudent } from "@/server/auth/guards";
 import {
+  type CreateResult,
   cancelApplication,
   createApplication,
   getAbsenceContext,
+  getApplicationLimitView,
   getApplicationTypeForStudent,
 } from "@/server/dal/applications";
 import {
@@ -43,6 +45,15 @@ function invalid(errors: Record<string, string>, values: Record<string, string>)
   return { errors, values, message: "Заявка не отправлена: проверьте отмеченные поля." };
 }
 
+/** Итог подачи: переход в карточку или сообщение (лимит проверяется на сервере, в DAL). */
+async function result(actor: StudentActor, created: CreateResult): Promise<FormState> {
+  if (created.ok) done(created.id);
+  if (created.error !== "LIMIT") return FAILED;
+  // Текст лимита — правило APPLICATION_LIMIT из таблицы Rule, нормы нет.
+  const { text } = await getApplicationLimitView(actor);
+  return { message: text, prototypeNote: true };
+}
+
 function done(id: string): never {
   revalidatePath("/", "layout");
   redirect(`/applications/${id}?created=1`);
@@ -54,14 +65,13 @@ export async function submitCertificate(_prev: FormState, formData: FormData): P
   if (!code.success) return FAILED;
   const parsed = parseCertificateForm(fields(formData));
   if (!parsed.ok) return invalid(parsed.errors, fields(formData));
-  const id = await createApplication(actor, {
+  const created = await createApplication(actor, {
     typeCode: code.data,
     branch: "MAIN",
     formData: { destination: parsed.data.destination, copies: parsed.data.copies },
     willBringOriginal: false,
   });
-  if (!id) return FAILED;
-  done(id);
+  return result(actor, created);
 }
 
 export async function submitAcademicLeave(
@@ -71,7 +81,7 @@ export async function submitAcademicLeave(
   const actor = await requireStudent();
   const parsed = parseLeaveForm(fields(formData));
   if (!parsed.ok) return invalid(parsed.errors, fields(formData));
-  const id = await createApplication(actor, {
+  const created = await createApplication(actor, {
     typeCode: "ACADEMIC_LEAVE",
     branch: parsed.data.branch,
     formData: {
@@ -81,8 +91,7 @@ export async function submitAcademicLeave(
     },
     willBringOriginal: parsed.data.hasDocuments,
   });
-  if (!id) return FAILED;
-  done(id);
+  return result(actor, created);
 }
 
 export async function submitAbsence(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -101,7 +110,7 @@ export async function submitAbsence(_prev: FormState, formData: FormData): Promi
     calendar: ctx.calendar,
   });
   if (!parsed.ok || !event) return invalid(parsed.ok ? {} : parsed.errors, input);
-  const id = await createApplication(actor, {
+  const created = await createApplication(actor, {
     typeCode: "PA_EXTENSION",
     branch: "MAIN",
     formData: {
@@ -113,8 +122,7 @@ export async function submitAbsence(_prev: FormState, formData: FormData): Promi
     },
     willBringOriginal: parsed.data.willBringOriginal,
   });
-  if (!id) return FAILED;
-  done(id);
+  return result(actor, created);
 }
 
 const idSchema = z.cuid();

@@ -50,7 +50,7 @@ export function CertificateForm({ typeCode }: { typeCode: string }) {
           {...describedBy("copies", false, e.copies)}
         />
       </Field>
-      <FormMessage message={state.message} />
+      <FormMessage message={state.message} prototypeNote={state.prototypeNote} />
       <div>
         <SubmitButton pending={pending}>Заказать справку</SubmitButton>
       </div>

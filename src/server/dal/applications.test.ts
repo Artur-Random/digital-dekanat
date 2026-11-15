@@ -10,6 +10,7 @@ import {
   changeApplicationStatus,
   createApplication,
   getAbsenceContext,
+  getApplicationLimit,
 } from "./applications";
 import { resetDemoData } from "./demo/reset";
 
@@ -50,7 +51,7 @@ afterAll(async () => {
 describe("подача и отмена студентом", () => {
   it("справка: подразделение и срок из типа, событие истории от студента", async () => {
     const denis = await studentOf("denis");
-    const id = await createApplication(
+    const created = await createApplication(
       denis,
       {
         typeCode: "CERT_ENROLLMENT",
@@ -60,9 +61,9 @@ describe("подача и отмена студентом", () => {
       },
       { now: NOW },
     );
-    expect(id).toBeTruthy();
+    expect(created.ok).toBe(true);
     const app = await getDb().application.findUniqueOrThrow({
-      where: { id: id ?? "" },
+      where: { id: created.ok ? created.id : "" },
       select: {
         status: true,
         studentId: true,
@@ -87,7 +88,7 @@ describe("подача и отмена студентом", () => {
         formData: {},
         willBringOriginal: false,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, error: "NOT_FOUND" });
     expect(
       await createApplication(alina, {
         typeCode: "ACADEMIC_LEAVE",
@@ -95,7 +96,7 @@ describe("подача и отмена студентом", () => {
         formData: {},
         willBringOriginal: false,
       }),
-    ).toBeNull();
+    ).toEqual({ ok: false, error: "NOT_FOUND" });
   });
 
   it("чужую заявку отменить нельзя, свою — только до взятия в работу", async () => {
@@ -209,5 +210,61 @@ describe("«Не смогу прийти»: кандидаты", () => {
     });
     const after = await getAbsenceContext(alina, NOW);
     expect(after.candidates.map((c) => c.id)).not.toContain(first?.id);
+  });
+});
+
+describe("лимит активных заявок (так устроено в прототипе)", () => {
+  it("шестая активная заявка не подаётся; после отмены одной — снова можно", async () => {
+    const alina = await studentOf("alina");
+    const cert = {
+      typeCode: "CERT_GRADES" as const,
+      branch: "MAIN",
+      formData: { destination: "По месту требования", copies: 1 },
+      willBringOriginal: false,
+    };
+    const start = (await getApplicationLimit(alina)).active;
+    const ids: string[] = [];
+    for (let i = start; i < 5; i++) {
+      const r = await createApplication(alina, cert, { now: NOW });
+      expect(r.ok).toBe(true);
+      if (r.ok) ids.push(r.id);
+    }
+    expect(await getApplicationLimit(alina)).toEqual({ active: 5, reached: true });
+    expect(await createApplication(alina, cert, { now: NOW })).toEqual({
+      ok: false,
+      error: "LIMIT",
+    });
+    // Отказ, отмена и готовая справка не считаются активными.
+    expect(await cancelApplication(alina, ids[0] ?? "", { now: NOW })).toBe(true);
+    expect((await getApplicationLimit(alina)).reached).toBe(false);
+    expect((await createApplication(alina, cert, { now: NOW })).ok).toBe(true);
+  });
+
+  it("гонка: две одновременные подачи при 4 активных — проходит ровно одна", async () => {
+    const alina = await studentOf("alina");
+    const cert = {
+      typeCode: "CERT_GRADES" as const,
+      branch: "MAIN",
+      formData: { destination: "По месту требования", copies: 1 },
+      willBringOriginal: false,
+    };
+    // Освободить одно место: сейчас активных 5 после предыдущего теста.
+    const active = await getDb().application.findFirstOrThrow({
+      where: {
+        student: { user: { login: "alina" } },
+        status: "SUBMITTED",
+        type: { code: "CERT_GRADES" },
+      },
+      select: { id: true },
+    });
+    expect(await cancelApplication(alina, active.id, { now: NOW })).toBe(true);
+    expect((await getApplicationLimit(alina)).active).toBe(4);
+    const results = await Promise.all([
+      createApplication(alina, cert, { now: NOW }),
+      createApplication(alina, cert, { now: NOW }),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, error: "LIMIT" }]);
+    expect((await getApplicationLimit(alina)).active).toBe(5);
   });
 });

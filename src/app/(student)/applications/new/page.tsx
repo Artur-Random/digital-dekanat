@@ -4,7 +4,8 @@ import Link from "next/link";
 
 import { BackButton } from "@/components/BackButton";
 import { requireStudent } from "@/server/auth/guards";
-import { listApplicationCatalog } from "@/server/dal/applications";
+import { ApplicationLimitNotice } from "@/components/ApplicationLimitNotice";
+import { getApplicationLimitView, listApplicationCatalog } from "@/server/dal/applications";
 
 export const metadata: Metadata = { title: "Новая заявка" };
 
@@ -15,7 +16,19 @@ function hrefFor(code: string): string {
 
 export default async function NewApplicationPage() {
   const actor = await requireStudent();
-  const catalog = await listApplicationCatalog(actor);
+  const [catalog, limit] = await Promise.all([
+    listApplicationCatalog(actor),
+    getApplicationLimitView(actor),
+  ]);
+  if (limit.reached) {
+    return (
+      <>
+        <BackButton fallbackHref="/applications" />
+        <h1 className="mt-2 text-2xl font-semibold">Новая заявка</h1>
+        <ApplicationLimitNotice text={limit.text} showLink />
+      </>
+    );
+  }
   const forms = catalog.filter((t) => !t.isInformational);
   const info = catalog.filter((t) => t.isInformational);
   const groups = [

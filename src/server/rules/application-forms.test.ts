@@ -5,6 +5,7 @@ import { HOLIDAYS } from "@/server/dal/demo/holidays";
 import {
   absenceNoticeDeadline,
   leaveBranch,
+  leaveExpulsionWarning,
   parseAbsenceForm,
   parseCertificateForm,
   parseLeaveForm,
@@ -52,6 +53,11 @@ describe("академический отпуск", () => {
     const r = parseLeaveForm({ basis: "FAMILY", months: "" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors.months).toBe("Укажите срок в месяцах.");
+  });
+  it("предупреждение N-49 только при долге на этапе II", () => {
+    expect(leaveExpulsionWarning([])).toBe(false);
+    expect(leaveExpulsionWarning([{ stage: "STAGE_1" }])).toBe(false);
+    expect(leaveExpulsionWarning([{ stage: "STAGE_1" }, { stage: "STAGE_2" }])).toBe(true);
   });
   it("без основания — ошибка", () => {
     const r = parseLeaveForm({ months: "3" });
