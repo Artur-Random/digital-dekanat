@@ -63,6 +63,35 @@ export const SCREENS: readonly Screen[] = [
   { code: "S4", slug: "applications", path: "/applications", role: "student", account: "alina" },
   { code: "S7", slug: "profile", path: "/profile", role: "student", account: "alina" },
   {
+    code: "S4a",
+    slug: "application-new",
+    path: "/applications/new",
+    role: "student",
+    account: "alina",
+  },
+  {
+    code: "S4a",
+    slug: "application-new-cert",
+    path: "/applications/new/CERT_ENROLLMENT",
+    role: "student",
+    account: "denis",
+  },
+  {
+    code: "S4a",
+    slug: "application-new-leave",
+    path: "/applications/new/ACADEMIC_LEAVE",
+    role: "student",
+    account: "denis",
+  },
+  { code: "S5", slug: "cant-attend", path: "/cant-attend", role: "student", account: "alina" },
+  {
+    code: "S4b",
+    slug: "application-extension",
+    path: async () => `/applications/${await applicationId("alina", "PA_EXTENSION")}`,
+    role: "student",
+    account: "alina",
+  },
+  {
     code: "S4b",
     slug: "application",
     path: async () => `/applications/${await applicationId("alina", "CERT_ENROLLMENT")}`,
@@ -77,6 +106,13 @@ export const SCREENS: readonly Screen[] = [
     path: async () => `/staff/applications/${await applicationId("alina", "PA_EXTENSION")}`,
     role: "staff",
     account: "dekanat",
+  },
+  {
+    code: "E2",
+    slug: "staff-application-leave",
+    path: async () => `/staff/applications/${await applicationId("denis", "ACADEMIC_LEAVE")}`,
+    role: "staff",
+    account: "mfc",
   },
 ];
 
