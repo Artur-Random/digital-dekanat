@@ -140,7 +140,7 @@ export async function notifyRetakeSchedulePublished(
 export async function notifyApplicationStatus(
   actor: StaffActor,
   applicationId: string,
-  options: WriteOptions = {},
+  options: WriteOptions & { comment?: string } = {},
 ): Promise<number> {
   return inTransaction(options.tx, async (tx) => {
     // Плоские запросы по одному: в транзакции одно соединение (см. loadEventInTx).
@@ -172,6 +172,7 @@ export async function notifyApplicationStatus(
       status: app.status,
       statusTitle: statusTitle(parseStages(app.type.stages), app.status, app.branch),
       unitName: app.unit.name,
+      comment: options.comment ?? null,
     });
     return insert(tx, [app.student.userId], {
       type: "APPLICATION_STATUS",

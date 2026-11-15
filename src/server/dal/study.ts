@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normLabel } from "@/lib/norm-label";
 import { z } from "zod";
 
 import type { StudentActor } from "@/server/auth/guards";
@@ -10,6 +11,7 @@ import type { GradeBandInput } from "@/server/rules/grades";
 import type { RuleText } from "@/server/rules/rule-text";
 
 import { loadCalendar } from "./calendar";
+import { listNorms } from "./norms";
 
 // Всё фильтруется по actor.studentId из сессии. Чужой или несуществующий id оценки даёт null,
 // страница отвечает notFound() одинаково в обоих случаях.
@@ -208,9 +210,17 @@ export async function getDisciplineView(actor: StudentActor, id: string) {
 /** Правило о неизменном расписании пересдачи (N-15) для подписи у пересдачи в расписании. */
 export async function getRetakeRule(
   actor: StudentActor,
-): Promise<{ text: string; normCodes: string[] } | null> {
+): Promise<{ text: string; norms: { code: string; label: string }[] } | null> {
   const rule = (await getRulesForStudent(actor)).find(
     (r) => r.trigger === "RETAKE_SCHEDULE_LOCKED",
   );
-  return rule ? { text: rule.body, normCodes: rule.normCodes } : null;
+  if (!rule) return null;
+  const norms = await listNorms(actor, rule.normCodes);
+  return {
+    text: rule.body,
+    norms: rule.normCodes.map((code) => {
+      const norm = norms.find((n) => n.code === code);
+      return { code, label: norm ? normLabel(norm) : code };
+    }),
+  };
 }

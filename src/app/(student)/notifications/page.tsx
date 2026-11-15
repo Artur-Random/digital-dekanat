@@ -4,7 +4,9 @@ import { BackButton } from "@/components/BackButton";
 import { NormChip } from "@/components/NormChip";
 import { formatDay, formatTime } from "@/lib/format-date";
 import { toDateKey } from "@/lib/moscow-date";
+import { normLabel } from "@/lib/norm-label";
 import { requireStudent } from "@/server/auth/guards";
+import { listNorms } from "@/server/dal/norms";
 import { listNotifications } from "@/server/dal/notifications";
 
 import { markAllRead, openNotification } from "./actions";
@@ -15,9 +17,15 @@ function normCodes(text: string): string[] {
   return [...new Set(text.match(/N-\d+/g) ?? [])];
 }
 
+/** Коды норм в тексте уведомления («(N-15)») не показываем: ниже они чипами с документом и пунктом. */
+function withoutCodes(text: string): string {
+  return text.replace(/\s*\((?:N-\d+(?:,\s*)?)+\)/g, "");
+}
+
 export default async function NotificationsPage() {
   const actor = await requireStudent();
-  const notifications = await listNotifications(actor);
+  const [notifications, norms] = await Promise.all([listNotifications(actor), listNorms(actor)]);
+  const labels = new Map(norms.map((n) => [n.code, normLabel(n)]));
   const unread = notifications.filter((n) => !n.isRead).length;
 
   // Группы по дате (Москва), в порядке от новых к старым.
@@ -67,7 +75,7 @@ export default async function NotificationsPage() {
                           type="submit"
                           data-testid="notification"
                           data-read={n.isRead ? "true" : "false"}
-                          className={`hover:bg-surface-muted w-full rounded-md border p-3 text-left ${
+                          className={`hover:bg-surface-muted w-full cursor-pointer rounded-md border p-3 text-left transition-colors ${
                             n.isRead ? "border-border" : "border-accent border-l-4"
                           }`}
                         >
@@ -82,14 +90,16 @@ export default async function NotificationsPage() {
                           <span className={`mt-1 block ${n.isRead ? "" : "font-semibold"}`}>
                             {n.title}
                           </span>
-                          <span className="text-ink-muted mt-1 block text-sm">{n.body}</span>
+                          <span className="text-ink-muted mt-1 block text-sm">
+                            {withoutCodes(n.body)}
+                          </span>
                         </button>
                       </form>
                       {/* Коды норм из текста — ссылками на «Почему так»: внутрь кнопки ссылку не вложить. */}
                       {normCodes(n.body).length > 0 ? (
                         <div className="mt-1 flex flex-wrap gap-2">
                           {normCodes(n.body).map((code) => (
-                            <NormChip key={code} code={code} />
+                            <NormChip key={code} code={code} label={labels.get(code) ?? code} />
                           ))}
                         </div>
                       ) : null}

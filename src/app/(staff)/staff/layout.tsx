@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { LogoutButton } from "@/components/LogoutButton";
 import { requireStaff } from "@/server/auth/guards";
 import { getStaffProfile } from "@/server/dal/staff";
+import { BackToTop } from "@/components/BackToTop";
 
 // Guard в layout только скрывает оболочку. Каждая страница вызывает requireStaff() сама.
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
@@ -44,10 +45,12 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       </header>
       <main
         id="main"
+        tabIndex={-1}
         className="safe-x mx-auto w-full max-w-5xl flex-1 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
       >
         {children}
       </main>
+      <BackToTop />
     </div>
   );
 }

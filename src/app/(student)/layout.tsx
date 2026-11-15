@@ -5,6 +5,7 @@ import { Logo } from "@/components/Logo";
 import { StudentNav } from "@/components/StudentNav";
 import { requireStudent } from "@/server/auth/guards";
 import { countUnreadNotifications } from "@/server/dal/notifications";
+import { BackToTop } from "@/components/BackToTop";
 
 // Guard в layout только скрывает оболочку от чужих. Каждая страница всё равно вызывает
 // requireStudent() сама: layout не перепроверяется при клиентской навигации.
@@ -40,9 +41,10 @@ export default async function StudentLayout({ children }: { children: React.Reac
       <div className="mx-auto flex w-full max-w-5xl flex-1">
         <StudentNav />
         {/* Нижний отступ на телефоне: контент не прячется под панелью вкладок. */}
-        <main id="main" className="safe-x pb-under-nav min-w-0 flex-1 pt-6 md:pb-8">
+        <main id="main" tabIndex={-1} className="safe-x pb-under-nav min-w-0 flex-1 pt-6 md:pb-8">
           {children}
         </main>
+        <BackToTop aboveNav />
       </div>
     </div>
   );

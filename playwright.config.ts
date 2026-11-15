@@ -29,7 +29,15 @@ export default defineConfig({
     // Основной набор: локальный dev или production-сборка с тестовой базой.
     {
       name: "chromium",
-      testIgnore: ["prod-smoke/**", "security/lockout.spec.ts"],
+      testIgnore: ["prod-smoke/**", "security/lockout.spec.ts", "flows/**"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // Сквозные сценарии, которые меняют данные (подача заявки, смена статуса): после основного
+    // набора, чтобы не сбивать параллельные проверки списков и счётчиков уведомлений.
+    {
+      name: "flows",
+      testMatch: ["flows/**/*.spec.ts"],
+      dependencies: ["chromium"],
       use: { ...devices["Desktop Chrome"] },
     },
     // Блокировка входа запирает denis на время теста: запускаем после основного набора,
@@ -37,7 +45,8 @@ export default defineConfig({
     {
       name: "lockout",
       testMatch: ["security/lockout.spec.ts"],
-      dependencies: ["chromium"],
+      // После flows: его финальный сброс демо-данных удаляет сессии и попытки входа.
+      dependencies: ["chromium", "flows"],
       use: { ...devices["Desktop Chrome"] },
     },
     // Только неизменяющие проверки без входа против развёрнутого сайта (deploy.yml).

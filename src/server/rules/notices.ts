@@ -36,16 +36,21 @@ export function applicationStatusNotice(app: {
   status: ApplicationStatus;
   statusTitle: string;
   unitName: string;
+  /** Комментарий сотрудника; при отказе это причина (N-46). */
+  comment?: string | null;
 }): { title: string; body: string } {
+  const note = app.comment
+    ? ` ${app.status === "REJECTED" ? "Причина" : "Комментарий"}: ${app.comment}`
+    : "";
   const place = app.unitName.includes("МФЦ") ? "в МФЦ" : "в деканате";
   if (app.status === "READY" && app.typeCode.startsWith("CERT_")) {
     return {
       title: `Справка готова, забрать ${place}`,
-      body: `«${app.title}» готова к выдаче. Подробности в карточке заявки.`,
+      body: `«${app.title}» готова к выдаче. Подробности в карточке заявки.${note}`,
     };
   }
   return {
     title: `${app.title}: ${app.statusTitle}`,
-    body: `Статус заявки изменился: ${app.statusTitle}.`,
+    body: `Статус заявки изменился: ${app.statusTitle}.${note}`,
   };
 }

@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 
+import { normLabel } from "@/lib/norm-label";
 import type { NormView } from "@/server/dal/norms";
 
 /**
@@ -8,13 +9,14 @@ import type { NormView } from "@/server/dal/norms";
  * и ведёт на «Почему так» (S8).
  */
 export function NormQuote({ norm }: { norm: NormView }) {
+  const label = normLabel(norm);
   return (
     <details className="group open:w-full" data-testid="norm-quote" data-code={norm.code}>
       <summary
-        aria-label={`Норма ${norm.code}: показать цитату`}
+        aria-label={`${label}: показать цитату`}
         className="border-accent text-accent hover:bg-surface-muted inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-full border px-3 text-sm font-medium [&::-webkit-details-marker]:hidden"
       >
-        {norm.code}
+        {label}
         <ChevronDown
           aria-hidden="true"
           className="size-4 transition-transform group-open:rotate-180"

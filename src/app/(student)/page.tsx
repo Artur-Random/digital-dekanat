@@ -8,7 +8,9 @@ import { SectionSkeleton } from "@/components/SectionSkeleton";
 import { TodayBlock } from "@/components/TodayBlock";
 import { formatDateKey } from "@/lib/format-date";
 import { requireStudent, type StudentActor } from "@/server/auth/guards";
+import { normLabel } from "@/lib/norm-label";
 import { getActionFeedContext } from "@/server/dal/action-feed";
+import { listNorms } from "@/server/dal/norms";
 import { listScheduleForStudent } from "@/server/dal/schedule";
 import { listStudentApplications } from "@/server/dal/students";
 import { getRetakeRule } from "@/server/dal/study";
@@ -33,8 +35,13 @@ async function Today({ actor, now }: { actor: StudentActor; now: Date }) {
 }
 
 async function Feed({ actor, now }: { actor: StudentActor; now: Date }) {
-  const ctx = await getActionFeedContext(actor, now);
-  return <ActionFeed items={ctx ? buildActionFeed(now, ctx) : []} />;
+  const [ctx, norms] = await Promise.all([getActionFeedContext(actor, now), listNorms(actor)]);
+  return (
+    <ActionFeed
+      items={ctx ? buildActionFeed(now, ctx) : []}
+      normLabels={new Map(norms.map((n) => [n.code, normLabel(n)]))}
+    />
+  );
 }
 
 async function MyApplications({ actor }: { actor: StudentActor }) {

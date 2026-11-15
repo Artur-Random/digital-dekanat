@@ -44,7 +44,8 @@ export async function getUnitApplication(actor: StaffActor, id: string) {
       createdAt: true,
       stageDeadline: true,
       willBringOriginal: true,
-      type: { select: { title: true, stages: true } },
+      formData: true,
+      type: { select: { title: true, code: true, stages: true, requiredDocuments: true } },
       student: { select: { fullName: true, group: { select: { code: true } } } },
       events: {
         orderBy: { createdAt: "asc" },
