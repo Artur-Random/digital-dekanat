@@ -5,7 +5,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { StaffActor, StudentActor } from "@/server/auth/guards";
 import { disconnectDb, getDb } from "@/server/db";
 
-import { cancelApplication, changeApplicationStatus, createApplication } from "./applications";
+import {
+  cancelApplication,
+  changeApplicationStatus,
+  createApplication,
+  getAbsenceContext,
+} from "./applications";
 import { resetDemoData } from "./demo/reset";
 
 async function studentOf(login: "alina" | "denis"): Promise<StudentActor> {
@@ -179,5 +184,30 @@ describe("смена статуса сотрудником", () => {
     expect(
       await changeApplicationStatus(dekanat, { id: ext.id, to: "APPROVED", comment: "" }),
     ).toEqual({ ok: false, error: "NOT_ALLOWED" });
+  });
+});
+
+describe("«Не смогу прийти»: кандидаты", () => {
+  it("отменённый контроль не предлагается", async () => {
+    const alina = await studentOf("alina");
+    const before = await getAbsenceContext(alina, NOW);
+    const first = before.candidates[0];
+    expect(first).toBeDefined();
+    const staff = await getDb().staffProfile.findFirstOrThrow({
+      where: { user: { login: "dekanat" } },
+      select: { id: true },
+    });
+    await getDb().scheduleChange.create({
+      data: {
+        eventId: first?.id ?? "",
+        field: "CANCELLED",
+        oldValue: "false",
+        newValue: "true",
+        reason: "тест",
+        changedById: staff.id,
+      },
+    });
+    const after = await getAbsenceContext(alina, NOW);
+    expect(after.candidates.map((c) => c.id)).not.toContain(first?.id);
   });
 });

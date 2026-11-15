@@ -131,6 +131,8 @@ export async function getAbsenceContext(
     db.scheduleEvent.findMany({
       where: {
         type: { in: CONTROL_TYPES },
+        // Отменённый контроль (ScheduleChange CANCELLED = true) не проводится: сообщать не о чем.
+        changes: { none: { field: "CANCELLED", newValue: "true" } },
         OR: [{ groupId: profile.groupId }, { studentId: actor.studentId }],
         startsAt: {
           gte: moscowDateTime(addDays(today, -14), "00:00"),
