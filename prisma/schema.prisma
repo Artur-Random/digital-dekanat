@@ -86,6 +86,8 @@ enum RuleTrigger {
   RETAKE_SCHEDULE_PUBLISH
   GRADE_SATISFACTORY_ASSIGNMENT
   STIPEND_AFTER_LIQUIDATION
+  /// Не больше 5 активных заявок у студента (решение Кирилла 15.11, так устроено в прототипе).
+  APPLICATION_LIMIT
 }
 
 enum HolidayKind {
