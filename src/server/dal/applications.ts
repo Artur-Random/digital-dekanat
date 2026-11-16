@@ -23,6 +23,7 @@ import {
   applicationLimitReached,
   canStudentCancel,
   countActiveApplications,
+  isLimitExempt,
   findBranch,
   nextStageDeadline,
   parseStages,
@@ -170,15 +171,21 @@ export type NewApplication = {
  * ветка — существовать у типа. Подразделение и срок берутся из типа, не из формы.
  * Возвращает id заявки или null.
  */
-export type CreateResult = { ok: true; id: string } | { ok: false; error: "NOT_FOUND" | "LIMIT" };
+export type CreateResult =
+  { ok: true; id: string } | { ok: false; error: "NOT_FOUND" | "LIMIT" | "DUPLICATE" };
 
 async function countActive(tx: DbTx, studentId: string): Promise<number> {
   const rows = await tx.application.findMany({
     where: { studentId, status: { notIn: ["REJECTED", "CANCELLED"] } },
-    select: { status: true, branch: true, type: { select: { stages: true } } },
+    select: { status: true, branch: true, type: { select: { stages: true, code: true } } },
   });
   return countActiveApplications(
-    rows.map((r) => ({ status: r.status, branch: r.branch, stages: parseStages(r.type.stages) })),
+    rows.map((r) => ({
+      status: r.status,
+      branch: r.branch,
+      stages: parseStages(r.type.stages),
+      typeCode: r.type.code,
+    })),
   );
 }
 
@@ -199,8 +206,26 @@ export async function createApplication(
   return getDb().$transaction(async (tx) => {
     // Блокировка строки студента: две одновременные подачи не обойдут лимит.
     await tx.$executeRaw`SELECT 1 FROM "StudentProfile" WHERE "id" = ${actor.studentId} FOR UPDATE`;
-    if (applicationLimitReached(await countActive(tx, actor.studentId))) {
+    if (
+      !isLimitExempt(input.typeCode) &&
+      applicationLimitReached(await countActive(tx, actor.studentId))
+    ) {
       return { ok: false, error: "LIMIT" };
+    }
+    // «Не смогу прийти» вне лимита, поэтому по одному контролю — одно действующее заявление:
+    // иначе очередь деканата можно засыпать копиями (security-reviewer, 16.11).
+    const eventId = input.formData.eventId;
+    if (input.typeCode === "PA_EXTENSION" && typeof eventId === "string") {
+      const duplicate = await tx.application.findFirst({
+        where: {
+          studentId: actor.studentId,
+          type: { code: "PA_EXTENSION" },
+          status: { notIn: ["REJECTED", "CANCELLED"] },
+          formData: { path: ["eventId"], equals: eventId },
+        },
+        select: { id: true },
+      });
+      if (duplicate) return { ok: false, error: "DUPLICATE" };
     }
     const type = await tx.applicationType.findFirst({
       where: {

@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 
-import type { ApplicationStatus } from "@/generated/prisma/enums";
+import type { ApplicationStatus, ApplicationTypeCode } from "@/generated/prisma/enums";
 import { type DateKey, toDateKey } from "@/lib/moscow-date";
 import { APPLICATION_STATUS_LABEL } from "@/lib/labels";
 
@@ -220,13 +220,30 @@ export function stageTimeline(
 export const MAX_ACTIVE_APPLICATIONS = 5;
 
 /**
- * Число активных заявок: не завершённых (не пройден последний этап) и не отменённых, без отказов.
- * Готовая справка завершена: решения ждать не нужно, отменить её нельзя.
+ * Заявления вне лимита: «Не смогу прийти» (продление аттестации) — у него срок по норме
+ * (N-04, N-16), ждать освобождения места нельзя (решение Кирилла 16.11).
+ */
+export const LIMIT_EXEMPT_TYPES: readonly ApplicationTypeCode[] = ["PA_EXTENSION"];
+
+export function isLimitExempt(typeCode: ApplicationTypeCode): boolean {
+  return LIMIT_EXEMPT_TYPES.includes(typeCode);
+}
+
+/**
+ * Число активных заявок для лимита: не завершённых (не пройден последний этап) и не отменённых,
+ * без отказов и без заявлений вне лимита. Готовая справка завершена: решения ждать не нужно.
  */
 export function countActiveApplications(
-  apps: readonly { status: ApplicationStatus; branch: string; stages: StageBranch[] }[],
+  apps: readonly {
+    status: ApplicationStatus;
+    branch: string;
+    stages: StageBranch[];
+    typeCode: ApplicationTypeCode;
+  }[],
 ): number {
-  return apps.filter((a) => !isClosed(findBranch(a.stages, a.branch), a.status)).length;
+  return apps.filter(
+    (a) => !isLimitExempt(a.typeCode) && !isClosed(findBranch(a.stages, a.branch), a.status),
+  ).length;
 }
 
 export function applicationLimitReached(activeCount: number): boolean {

@@ -180,11 +180,6 @@ test("лимит: не больше 5 активных заявок, прове�
   const LIMIT_TEXT =
     "Можно иметь не больше 5 активных заявок. Дождитесь решения или отмените одну из них.";
   const alina = await asUser(browser, "alina");
-  await alina.goto("/applications");
-  const activeRows = alina.getByTestId("applications-active").getByTestId("application-row");
-  const active = await activeRows.count();
-  expect(active).toBeLessThan(5);
-
   // Вторая вкладка с формой, открытой до достижения лимита: её отправка проверит сервер.
   const stale = await alina.context().newPage();
   await stale.goto("/applications/new/CERT_SUMMONS");
@@ -196,7 +191,13 @@ test("лимит: не больше 5 активных заявок, прове�
     await expect(alina.getByTestId("created-banner")).toBeVisible();
     created.push(idFromUrl(alina));
   }
-  for (let i = active; i < 5; i++) await orderCertificate();
+  // Сколько справок нужно до лимита, зависит от предыдущих тестов: заказываем, пока кнопка активна.
+  for (let i = 0; i < 6; i++) {
+    await alina.goto("/applications");
+    if ((await alina.getByTestId("new-application").getAttribute("aria-disabled")) === "true")
+      break;
+    await orderCertificate();
+  }
 
   await alina.goto("/applications");
   const button = alina.getByTestId("new-application");
@@ -204,9 +205,17 @@ test("лимит: не больше 5 активных заявок, прове�
   await expect(button).not.toHaveAttribute("href", /.*/);
   await expect(alina.getByTestId("application-limit")).toContainText(LIMIT_TEXT);
   await expect(alina.getByTestId("application-limit")).toContainText("так устроено в прототипе");
+  // «Не смогу прийти» вне лимита: ссылка на S4 и единственный пункт каталога.
+  await expect(alina.getByTestId("limit-exempt-link")).toHaveAttribute("href", "/cant-attend");
   await alina.goto("/applications/new");
   await expect(alina.getByTestId("application-limit")).toContainText(LIMIT_TEXT);
-  await expect(alina.getByTestId("catalog-item")).toHaveCount(0);
+  await expect(alina.getByTestId("catalog-item")).toHaveCount(1);
+  await expect(alina.getByTestId("catalog-item")).toHaveAttribute("data-code", "PA_EXTENSION");
+  await alina.goto("/cant-attend");
+  await expect(alina.getByTestId("application-limit")).toHaveCount(0);
+  await expect(
+    alina.getByRole("button", { name: "Отправить заявление о продлении" }),
+  ).toBeVisible();
 
   // Сервер не принимает шестую заявку, даже если форма уже была открыта.
   await stale.getByLabel("Куда нужна справка").fill("По месту требования");

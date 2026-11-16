@@ -6,6 +6,7 @@ import { BackButton } from "@/components/BackButton";
 import { requireStudent } from "@/server/auth/guards";
 import { ApplicationLimitNotice } from "@/components/ApplicationLimitNotice";
 import { getApplicationLimitView, listApplicationCatalog } from "@/server/dal/applications";
+import { isLimitExempt } from "@/server/rules/application-stages";
 
 export const metadata: Metadata = { title: "Новая заявка" };
 
@@ -20,16 +21,10 @@ export default async function NewApplicationPage() {
     listApplicationCatalog(actor),
     getApplicationLimitView(actor),
   ]);
-  if (limit.reached) {
-    return (
-      <>
-        <BackButton fallbackHref="/applications" />
-        <h1 className="mt-2 text-2xl font-semibold">Новая заявка</h1>
-        <ApplicationLimitNotice text={limit.text} showLink />
-      </>
-    );
-  }
-  const forms = catalog.filter((t) => !t.isInformational);
+  // При лимите в каталоге остаются только заявления вне лимита («Не смогу прийти»).
+  const forms = catalog.filter(
+    (t) => !t.isInformational && (!limit.reached || isLimitExempt(t.code)),
+  );
   const info = catalog.filter((t) => t.isInformational);
   const groups = [
     { title: "Справки в МФЦ", items: forms.filter((t) => t.code.startsWith("CERT_")) },
@@ -41,6 +36,7 @@ export default async function NewApplicationPage() {
       <BackButton fallbackHref="/applications" />
       <h1 className="mt-2 text-2xl font-semibold">Новая заявка</h1>
       <p className="text-ink-muted mt-2">Выберите, что нужно оформить.</p>
+      {limit.reached ? <ApplicationLimitNotice text={limit.text} showLink /> : null}
       {groups.length === 0 ? (
         <p className="text-ink-muted mt-4">Для вашего уровня образования заявок пока нет.</p>
       ) : (
