@@ -8,6 +8,7 @@ import {
   allowedTransitions,
   applicationLimitReached,
   countActiveApplications,
+  isLimitExempt,
   canStudentCancel,
   isClosed,
   nextStageDeadline,
@@ -197,6 +198,7 @@ describe("лимит активных заявок", () => {
       status,
       branch: "MAIN",
       stages: cert,
+      typeCode: "CERT_GRADES" as const,
     });
     expect(
       countActiveApplications([
@@ -207,6 +209,16 @@ describe("лимит активных заявок", () => {
         app("CANCELLED"),
       ]),
     ).toBe(2);
+    // «Не смогу прийти» в лимит не входит (решение Кирилла 16.11).
+    const ext = parseStages(APPLICATION_TYPES.find((t) => t.code === "PA_EXTENSION")?.stages ?? []);
+    expect(
+      countActiveApplications([
+        app("SUBMITTED"),
+        { status: "SUBMITTED", branch: "MAIN", stages: ext, typeCode: "PA_EXTENSION" },
+      ]),
+    ).toBe(1);
+    expect(isLimitExempt("PA_EXTENSION")).toBe(true);
+    expect(isLimitExempt("CERT_GRADES")).toBe(false);
     expect(MAX_ACTIVE_APPLICATIONS).toBe(5);
     expect(applicationLimitReached(4)).toBe(false);
     expect(applicationLimitReached(5)).toBe(true);

@@ -8,12 +8,7 @@ import { formatDateKeySmart, formatDayTime } from "@/lib/format-date";
 import { toDateKey } from "@/lib/moscow-date";
 import { EVENT_TYPE_LABEL } from "@/lib/schedule-labels";
 import { requireStudent } from "@/server/auth/guards";
-import { ApplicationLimitNotice } from "@/components/ApplicationLimitNotice";
-import {
-  getAbsenceContext,
-  getApplicationLimitView,
-  getApplicationTypeForStudent,
-} from "@/server/dal/applications";
+import { getAbsenceContext, getApplicationTypeForStudent } from "@/server/dal/applications";
 import { listNorms } from "@/server/dal/norms";
 import { absenceNoticeDeadline } from "@/server/rules/application-forms";
 
@@ -24,12 +19,12 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 const eventParam = z.cuid();
 
 // S5 «Не смогу прийти»: на выходе заявление о продлении срока аттестации в деканат (N-05).
+// В лимит активных заявок не входит: срок по норме (N-04, N-16), решение Кирилла 16.11.
 export default async function CantAttendPage({ searchParams }: Props) {
   const actor = await requireStudent();
-  const [type, ctx, limit] = await Promise.all([
+  const [type, ctx] = await Promise.all([
     getApplicationTypeForStudent(actor, "PA_EXTENSION"),
     getAbsenceContext(actor),
-    getApplicationLimitView(actor),
   ]);
   const norms = new Map(
     (await listNorms(actor, ["N-04", "N-05", "N-06", "N-07", "N-16"])).map((n) => [n.code, n]),
@@ -73,17 +68,14 @@ export default async function CantAttendPage({ searchParams }: Props) {
         {type.unit.name.toLowerCase()}.
       </p>
       <NormQuotes codes={["N-05"]} norms={norms} />
-      {limit.reached ? <ApplicationLimitNotice text={limit.text} showLink /> : null}
-      {limit.reached ? null : (
-        <AbsenceForm
-          candidates={candidates}
-          reasons={reasons}
-          initialEventId={event.success ? event.data : null}
-          deadlineNorms={<NormQuotes codes={["N-04", "N-16"]} norms={norms} />}
-          documentNorms={<NormQuotes codes={["N-06"]} norms={norms} />}
-          periodNorms={<NormQuotes codes={["N-07"]} norms={norms} />}
-        />
-      )}
+      <AbsenceForm
+        candidates={candidates}
+        reasons={reasons}
+        initialEventId={event.success ? event.data : null}
+        deadlineNorms={<NormQuotes codes={["N-04", "N-16"]} norms={norms} />}
+        documentNorms={<NormQuotes codes={["N-06"]} norms={norms} />}
+        periodNorms={<NormQuotes codes={["N-07"]} norms={norms} />}
+      />
     </>
   );
 }

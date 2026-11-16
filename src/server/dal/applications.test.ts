@@ -234,10 +234,43 @@ describe("лимит активных заявок (так устроено в �
       ok: false,
       error: "LIMIT",
     });
+    // «Не смогу прийти» в лимит не входит и подаётся при лимите (решение Кирилла 16.11).
+    const ext = await createApplication(
+      alina,
+      {
+        typeCode: "PA_EXTENSION",
+        branch: "MAIN",
+        formData: { event: "тест" },
+        willBringOriginal: true,
+      },
+      { now: NOW },
+    );
+    expect(ext.ok).toBe(true);
+    expect((await getApplicationLimit(alina)).active).toBe(5);
     // Отказ, отмена и готовая справка не считаются активными.
     expect(await cancelApplication(alina, ids[0] ?? "", { now: NOW })).toBe(true);
     expect((await getApplicationLimit(alina)).reached).toBe(false);
     expect((await createApplication(alina, cert, { now: NOW })).ok).toBe(true);
+  });
+
+  it("«Не смогу прийти»: одно действующее заявление на контроль, после отмены можно снова", async () => {
+    const alina = await studentOf("alina");
+    const eventId = (await getAbsenceContext(alina, NOW)).candidates[1]?.id ?? "";
+    expect(eventId).not.toBe("");
+    const absence = {
+      typeCode: "PA_EXTENSION" as const,
+      branch: "MAIN",
+      formData: { eventId, event: "тест" },
+      willBringOriginal: true,
+    };
+    const first = await createApplication(alina, absence, { now: NOW });
+    expect(first.ok).toBe(true);
+    expect(await createApplication(alina, absence, { now: NOW })).toEqual({
+      ok: false,
+      error: "DUPLICATE",
+    });
+    expect(await cancelApplication(alina, first.ok ? first.id : "", { now: NOW })).toBe(true);
+    expect((await createApplication(alina, absence, { now: NOW })).ok).toBe(true);
   });
 
   it("гонка: две одновременные подачи при 4 активных — проходит ровно одна", async () => {

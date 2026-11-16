@@ -85,7 +85,7 @@ export default async function ApplicationsPage() {
       </div>
       {limit.reached ? (
         <div id="limit-note">
-          <ApplicationLimitNotice text={limit.text} />
+          <ApplicationLimitNotice text={limit.text} showExempt />
         </div>
       ) : null}
       {applications.length === 0 ? (

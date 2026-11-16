@@ -48,6 +48,9 @@ function invalid(errors: Record<string, string>, values: Record<string, string>)
 /** Итог подачи: переход в карточку или сообщение (лимит проверяется на сервере, в DAL). */
 async function result(actor: StudentActor, created: CreateResult): Promise<FormState> {
   if (created.ok) done(created.id);
+  if (created.error === "DUPLICATE") {
+    return { message: "По этому контролю заявление уже подано: оно в разделе «Заявки»." };
+  }
   if (created.error !== "LIMIT") return FAILED;
   // Текст лимита — правило APPLICATION_LIMIT из таблицы Rule, нормы нет.
   const { text } = await getApplicationLimitView(actor);
