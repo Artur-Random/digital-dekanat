@@ -215,3 +215,20 @@ export function stageTimeline(
   }
   return entries;
 }
+
+/** Не больше 5 активных заявок у студента (решение Кирилла 15.11, так устроено в прототипе). */
+export const MAX_ACTIVE_APPLICATIONS = 5;
+
+/**
+ * Число активных заявок: не завершённых (не пройден последний этап) и не отменённых, без отказов.
+ * Готовая справка завершена: решения ждать не нужно, отменить её нельзя.
+ */
+export function countActiveApplications(
+  apps: readonly { status: ApplicationStatus; branch: string; stages: StageBranch[] }[],
+): number {
+  return apps.filter((a) => !isClosed(findBranch(a.stages, a.branch), a.status)).length;
+}
+
+export function applicationLimitReached(activeCount: number): boolean {
+  return activeCount >= MAX_ACTIVE_APPLICATIONS;
+}

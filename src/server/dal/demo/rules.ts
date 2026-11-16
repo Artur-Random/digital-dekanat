@@ -51,6 +51,8 @@ const VERIFIED = new Set<RuleTrigger>([
   "RETAKE_SCHEDULE_PUBLISH",
   "GRADE_SATISFACTORY_ASSIGNMENT",
   "STIPEND_AFTER_LIQUIDATION",
+  // Текст дал Кирилл дословно 15.11.2026.
+  "APPLICATION_LIMIT",
 ]);
 
 function rule(
@@ -180,6 +182,16 @@ export const RULES: readonly RuleSeed[] = [
     // ликвидации прямой нормы нет — пометка «так устроено в прототипе».
     ["N-19", "N-20"],
     true,
+    true,
+  ),
+  // Лимит активных заявок: нормы нет, решение прототипа (Кирилл, 15.11.2026). Число в тексте
+  // совпадает с MAX_ACTIVE_APPLICATIONS в src/server/rules/application-stages.ts.
+  rule(
+    "APPLICATION_LIMIT",
+    "Не больше 5 активных заявок",
+    "Можно иметь не больше 5 активных заявок. Дождитесь решения или отмените одну из них.",
+    [],
+    false,
     true,
   ),
 ];

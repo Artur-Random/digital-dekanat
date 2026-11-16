@@ -46,7 +46,17 @@ test("студент не отменит чужую заявку, подмени
   const foreign = await applicationId("denis", "ACADEMIC_LEAVE");
   await loginAs(page, "alina");
   await page.goto(`/applications/${own}`, { waitUntil: "networkidle" });
-  await submitWithId(page, foreign, "Отменить заявку");
+  await page.getByRole("button", { name: "Отменить заявку" }).click();
+  const dialog = page.getByTestId("cancel-dialog");
+  await dialog.locator("form").evaluate((el, value) => {
+    el.querySelector('input[name="id"]')?.remove();
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "id";
+    input.value = value;
+    el.append(input);
+  }, foreign);
+  await dialog.getByRole("button", { name: "Отменить заявку" }).click();
   // Ответ тот же, что для несуществующей заявки: 404 на её адресе.
   await expect(page.getByRole("heading", { level: 1 })).toContainText("не найдена");
   expect(await statusAs(browser, "denis", `/applications/${foreign}`)).toBe("Подано");

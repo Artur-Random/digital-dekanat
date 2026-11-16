@@ -111,6 +111,14 @@ export function parseLeaveForm(input: Record<string, unknown>): FormResult<Leave
   return { ok: true, data: { ...r.data, branch: leaveBranch(r.data.basis, r.data.hasDocuments) } };
 }
 
+/**
+ * Предупреждение в мастере отпуска (N-49, 754общ п. 2.18): заявление не отменяет отчисление.
+ * Показываем, если есть долг на этапе II — после него при несдаче следует отчисление.
+ */
+export function leaveExpulsionWarning(debts: readonly { stage: "STAGE_1" | "STAGE_2" }[]): boolean {
+  return debts.some((d) => d.stage === "STAGE_2");
+}
+
 // --- «Не смогу прийти»: продление срока аттестации ---------------------------------------
 
 /** До какой даты включительно можно сообщить о неявке на контроль в день controlDay. */

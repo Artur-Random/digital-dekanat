@@ -122,7 +122,23 @@ test("справка: подача, отмена до взятия в работ
   created.push(id);
   await expect(alina.getByTestId("stage-deadline")).toBeVisible();
 
-  await alina.getByRole("button", { name: "Отменить заявку" }).click();
+  // Подтверждение в модальном окне: Escape и «Не отменять» ничего не меняют.
+  const trigger = alina.getByRole("button", { name: "Отменить заявку" });
+  const dialog = alina.getByTestId("cancel-dialog");
+  await trigger.click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Отменить заявку?");
+  await expect(dialog).toContainText("Это действие нельзя вернуть.");
+  await expect(dialog.getByRole("button", { name: "Не отменять" })).toBeFocused();
+  await alina.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await dialog.getByRole("button", { name: "Не отменять" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(alina.getByTestId("application-status")).toHaveText("Подано");
+  await trigger.click();
+  await dialog.getByRole("button", { name: "Отменить заявку" }).click();
   await expect(alina.getByTestId("application-status")).toHaveText("Отменено");
   await alina.goto("/applications");
   await expect(
@@ -158,4 +174,43 @@ test("академический отпуск без документов: ве�
   await expect(
     mfc.getByTestId("status-actions").locator("xpath=..").getByText("754общ, п. 2.14"),
   ).toBeVisible();
+});
+
+test("лимит: не больше 5 активных заявок, проверка и на сервере", async ({ browser }) => {
+  const LIMIT_TEXT =
+    "Можно иметь не больше 5 активных заявок. Дождитесь решения или отмените одну из них.";
+  const alina = await asUser(browser, "alina");
+  await alina.goto("/applications");
+  const activeRows = alina.getByTestId("applications-active").getByTestId("application-row");
+  const active = await activeRows.count();
+  expect(active).toBeLessThan(5);
+
+  // Вторая вкладка с формой, открытой до достижения лимита: её отправка проверит сервер.
+  const stale = await alina.context().newPage();
+  await stale.goto("/applications/new/CERT_SUMMONS");
+
+  async function orderCertificate() {
+    await alina.goto("/applications/new/CERT_GRADES");
+    await alina.getByLabel("Куда нужна справка").fill("По месту требования");
+    await alina.getByRole("button", { name: "Заказать справку" }).click();
+    await expect(alina.getByTestId("created-banner")).toBeVisible();
+    created.push(idFromUrl(alina));
+  }
+  for (let i = active; i < 5; i++) await orderCertificate();
+
+  await alina.goto("/applications");
+  const button = alina.getByTestId("new-application");
+  await expect(button).toHaveAttribute("aria-disabled", "true");
+  await expect(button).not.toHaveAttribute("href", /.*/);
+  await expect(alina.getByTestId("application-limit")).toContainText(LIMIT_TEXT);
+  await expect(alina.getByTestId("application-limit")).toContainText("так устроено в прототипе");
+  await alina.goto("/applications/new");
+  await expect(alina.getByTestId("application-limit")).toContainText(LIMIT_TEXT);
+  await expect(alina.getByTestId("catalog-item")).toHaveCount(0);
+
+  // Сервер не принимает шестую заявку, даже если форма уже была открыта.
+  await stale.getByLabel("Куда нужна справка").fill("По месту требования");
+  await stale.getByRole("button", { name: "Заказать справку" }).click();
+  await expect(stale.getByTestId("form-message")).toHaveText(LIMIT_TEXT);
+  await expect(stale).toHaveURL(/\/applications\/new\/CERT_SUMMONS$/);
 });

@@ -178,7 +178,7 @@ export function AbsenceForm({
         ) : null}
       </fieldset>
 
-      <FormMessage message={state.message} />
+      <FormMessage message={state.message} prototypeNote={state.prototypeNote} />
       <div>
         <SubmitButton pending={pending}>Отправить заявление о продлении</SubmitButton>
       </div>

@@ -27,7 +27,14 @@ function isBasis(value: string | undefined): value is LeaveBasis {
 }
 
 /** previews — этапы веток А и Б из данных типа заявки (сроки и нормы), отрисованы на сервере. */
-export function LeaveForm({ previews }: { previews: { A: ReactNode; B: ReactNode } }) {
+export function LeaveForm({
+  previews,
+  warning,
+}: {
+  previews: { A: ReactNode; B: ReactNode };
+  /** Предупреждение N-49 при долге на этапе II: видно до отправки. */
+  warning?: ReactNode;
+}) {
   const [state, action, pending] = useActionState(submitAcademicLeave, EMPTY_FORM_STATE);
   const e = state.errors ?? {};
   const v = state.values ?? {};
@@ -39,6 +46,8 @@ export function LeaveForm({ previews }: { previews: { A: ReactNode; B: ReactNode
 
   return (
     <form ref={formRef} action={action} className="mt-4 flex flex-col gap-4" noValidate>
+      {/* N-49 до полей: студент с долгом этапа II узнаёт о риске до того, как заполнит форму. */}
+      {warning}
       <fieldset
         className="flex flex-col gap-2"
         aria-describedby={e.basis ? "basis-error" : undefined}
@@ -94,7 +103,7 @@ export function LeaveForm({ previews }: { previews: { A: ReactNode; B: ReactNode
           {previews[branch]}
         </div>
       ) : null}
-      <FormMessage message={state.message} />
+      <FormMessage message={state.message} prototypeNote={state.prototypeNote} />
       <div>
         <SubmitButton pending={pending}>Подать заявление</SubmitButton>
       </div>

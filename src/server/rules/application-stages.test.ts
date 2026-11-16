@@ -4,7 +4,10 @@ import { APPLICATION_TYPES } from "@/server/dal/demo/application-types";
 import { HOLIDAYS } from "@/server/dal/demo/holidays";
 
 import {
+  MAX_ACTIVE_APPLICATIONS,
   allowedTransitions,
+  applicationLimitReached,
+  countActiveApplications,
   canStudentCancel,
   isClosed,
   nextStageDeadline,
@@ -184,5 +187,28 @@ describe("переходы и таймлайн заявки", () => {
     expect(entries.every((e) => e.state === "upcoming")).toBe(true);
     expect(entries[1]?.dueDays).toEqual({ days: 2, from: "SUBMITTED" });
     expect(entries[2]?.dueDays).toEqual({ days: 5, from: "PREVIOUS" });
+  });
+});
+
+describe("лимит активных заявок", () => {
+  it("готовая справка, отказ и отмена не активны; лимит 5", () => {
+    const cert = parseStages(APPLICATION_TYPES.find((t) => t.code === "CERT_GRADES")?.stages ?? []);
+    const app = (status: "SUBMITTED" | "IN_PROGRESS" | "READY" | "REJECTED" | "CANCELLED") => ({
+      status,
+      branch: "MAIN",
+      stages: cert,
+    });
+    expect(
+      countActiveApplications([
+        app("SUBMITTED"),
+        app("IN_PROGRESS"),
+        app("READY"),
+        app("REJECTED"),
+        app("CANCELLED"),
+      ]),
+    ).toBe(2);
+    expect(MAX_ACTIVE_APPLICATIONS).toBe(5);
+    expect(applicationLimitReached(4)).toBe(false);
+    expect(applicationLimitReached(5)).toBe(true);
   });
 });

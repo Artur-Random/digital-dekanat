@@ -3,14 +3,13 @@ import { notFound } from "next/navigation";
 
 import { ApplicationCard, stageNormCodes } from "@/components/ApplicationCard";
 import { BackButton } from "@/components/BackButton";
+import { CancelApplicationButton } from "@/components/forms/CancelApplicationButton";
 import { todayInMoscow } from "@/lib/moscow-date";
 import { requireStudent } from "@/server/auth/guards";
 import { getProductionCalendar, parseDocuments } from "@/server/dal/applications";
 import { listNorms } from "@/server/dal/norms";
 import { getStudentApplication } from "@/server/dal/students";
 import { canStudentCancel, parseStages } from "@/server/rules/application-stages";
-
-import { cancelOwnApplication } from "../actions";
 
 export const metadata: Metadata = { title: "Заявка" };
 
@@ -56,18 +55,12 @@ export default async function StudentApplicationPage({ params, searchParams }: P
         perspective="student"
       />
       {canStudentCancel(app.status) ? (
-        <form action={cancelOwnApplication} className="mt-8">
-          <input type="hidden" name="id" value={app.id} />
+        <section aria-label="Отмена заявки" className="mt-8">
           <p className="text-ink-muted text-sm">
             Отменить заявку можно, пока её не взяли в работу (так устроено в прототипе).
           </p>
-          <button
-            type="submit"
-            className="border-danger text-danger mt-2 inline-flex min-h-11 items-center rounded-md border px-4 font-medium"
-          >
-            Отменить заявку
-          </button>
-        </form>
+          <CancelApplicationButton applicationId={app.id} />
+        </section>
       ) : null}
     </>
   );
