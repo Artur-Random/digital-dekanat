@@ -2,36 +2,44 @@
 
 import { CalendarDays } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 /**
  * Кнопка «Выбрать дату»: открывает системный календарь (input type=date) и переходит
  * на /schedule?day=… На телефоне видна только иконка, подпись — в aria-label.
+ * Без showPicker (старые Safari и Firefox) показывается обычное видимое поле даты.
  */
 export function DatePickerButton({
   min,
   max,
   value,
   active,
+  activeLabel,
 }: {
   min: string;
   max: string;
   value: string;
   active: boolean;
+  /** Выбранная дата словами для aria-label, когда открыт вид дня. */
+  activeLabel?: string;
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
+  const [inline, setInline] = useState(false);
 
   function open() {
     const el = input.current;
     if (!el) return;
-    // showPicker есть в современных браузерах; иначе фокус и клик по полю.
-    try {
-      el.showPicker();
-    } catch {
-      el.focus();
-      el.click();
+    if (typeof el.showPicker === "function") {
+      try {
+        el.showPicker();
+        return;
+      } catch {
+        // Ниже — видимое поле.
+      }
     }
+    setInline(true);
+    requestAnimationFrame(() => input.current?.focus());
   }
 
   return (
@@ -39,8 +47,7 @@ export function DatePickerButton({
       <button
         type="button"
         onClick={open}
-        aria-label="Выбрать дату"
-        aria-pressed={active}
+        aria-label={active && activeLabel ? `Выбрать дату, выбрано ${activeLabel}` : "Выбрать дату"}
         data-testid="pick-date"
         className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 font-medium ${
           active ? "bg-accent text-accent-ink" : "border-border border"
@@ -50,19 +57,26 @@ export function DatePickerButton({
         <span className="hidden md:inline">Выбрать дату</span>
       </button>
       <input
+        // key: после перехода поле сбрасывается, и повторный выбор той же даты снова срабатывает.
+        key={value}
         ref={input}
         type="date"
-        tabIndex={-1}
-        aria-hidden="true"
+        tabIndex={inline ? 0 : -1}
+        aria-hidden={inline ? undefined : true}
+        aria-label={inline ? "Дата" : undefined}
         min={min}
         max={max}
         defaultValue={value}
         data-testid="pick-date-input"
         onChange={(e) => {
           const day = e.target.value;
-          if (day) router.push(`/schedule?day=${day}`);
+          if (day && day >= min && day <= max) router.push(`/schedule?day=${day}`);
         }}
-        className="pointer-events-none absolute bottom-0 left-0 size-px opacity-0"
+        className={
+          inline
+            ? "border-ink-muted bg-surface absolute top-full right-0 z-10 mt-2 min-h-11 rounded-md border px-3"
+            : "pointer-events-none absolute bottom-0 left-0 size-px opacity-0"
+        }
       />
     </span>
   );

@@ -124,7 +124,7 @@ export function leaveExpulsionWarning(debts: readonly { stage: "STAGE_1" | "STAG
 
 /** Текст ошибки даты вне допустимого периода: с конкретными датами. */
 export function dateRangeError(bounds: { min: DateKey; max: DateKey }): string {
-  return `Укажите дату с ${formatDateKeyWithYear(bounds.min)} по ${formatDateKeyWithYear(bounds.max)}.`;
+  return `Укажите дату с ${formatDateKeyWithYear(bounds.min)} по ${formatDateKeyWithYear(bounds.max)} (так устроено в прототипе).`;
 }
 
 // --- «Не смогу прийти»: продление срока аттестации ---------------------------------------

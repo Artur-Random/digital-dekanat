@@ -65,7 +65,10 @@ export default async function SchedulePage({ searchParams }: Props) {
   return (
     <>
       <h1 className="text-2xl font-semibold">Расписание</h1>
-      <nav aria-label="Вид расписания" className="mt-4 flex flex-nowrap items-center gap-2">
+      <nav
+        aria-label="Вид расписания"
+        className="mt-4 flex flex-nowrap items-center gap-2 overflow-x-auto"
+      >
         <Link
           href="/schedule"
           aria-current={view === "today" ? "page" : undefined}
@@ -92,6 +95,7 @@ export default async function SchedulePage({ searchParams }: Props) {
           max={year.end}
           value={pickedDay ?? today}
           active={view === "day"}
+          activeLabel={pickedDay ? formatDateKeyLong(pickedDay) : undefined}
         />
       </nav>
       <div className="mt-6">
@@ -142,7 +146,10 @@ async function Day({ actor, day, today }: { actor: StudentActor; day: DateKey; t
           {/* Будущая неделя без пар — расписание ещё не опубликовано; иначе в этот день пар нет. */}
           {weekEmpty && week > mondayOf(today)
             ? "Расписание на эту неделю ещё не опубликовано"
-            : "В этот день пар нет"}
+            : "В этот день пар нет"}{" "}
+          <Link href={`/schedule?week=${week}`} className="text-accent underline">
+            Вся неделя
+          </Link>
         </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-2">

@@ -137,8 +137,9 @@ describe("«Не смогу прийти»", () => {
     );
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.errors.absenceFrom).toBe("Укажите дату с 1 сентября 2026 по 17 ноября 2027.");
-      expect(r.errors.absenceTo).toBe("Укажите дату с 1 сентября 2026 по 17 ноября 2027.");
+      const text = "Укажите дату с 1 сентября 2026 по 17 ноября 2027 (так устроено в прототипе).";
+      expect(r.errors.absenceFrom).toBe(text);
+      expect(r.errors.absenceTo).toBe(text);
     }
   });
 

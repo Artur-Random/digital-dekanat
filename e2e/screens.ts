@@ -1,6 +1,9 @@
 // Реестр экранов для smoke-тестов и автоскриншотов. Коды экранов из docs/spec-v1.md, раздел 2.
 // Новый экран добавляется сюда, и он автоматически попадает в тесты и скриншоты.
 
+import { addDays, todayInMoscow } from "../src/lib/moscow-date";
+import { academicYear } from "../src/server/rules/academic-year";
+
 import { applicationId, currentAssessmentOf, debtOf } from "./helpers/db";
 
 export type ScreenRole = "anonymous" | "student" | "staff";
@@ -35,6 +38,21 @@ export const SCREENS: readonly Screen[] = [
     code: "S2",
     slug: "schedule-week",
     path: "/schedule?view=week",
+    role: "student",
+    account: "alina",
+  },
+  {
+    code: "S2",
+    slug: "schedule-tomorrow",
+    path: "/schedule?view=tomorrow",
+    role: "student",
+    account: "alina",
+  },
+  {
+    code: "S2",
+    slug: "schedule-day-unpublished",
+    // Будущая неделя без расписания внутри учебного года: последняя неделя августа.
+    path: `/schedule?day=${addDays(academicYear(todayInMoscow()).end, -7)}`,
     role: "student",
     account: "alina",
   },

@@ -216,14 +216,26 @@ test("расписание: «Завтра», выбор даты, пустые 
 
   // Прошедший день без пар (неделя начала учебного года в сиде пустая) — «В этот день пар нет».
   await page.goto(`/schedule?day=${year.start}`);
-  await expect(page.getByTestId("day-empty")).toHaveText("В этот день пар нет");
+  await expect(page.getByTestId("day-empty")).toContainText("В этот день пар нет");
   // Будущая неделя без расписания — прежний текст.
   const lateSummer = addDays(year.end, -7);
   await page.goto(`/schedule?day=${lateSummer}`);
-  await expect(page.getByTestId("day-empty")).toHaveText(
+  await expect(page.getByTestId("day-empty")).toContainText(
     "Расписание на эту неделю ещё не опубликовано",
   );
   // Дата вне учебного года — обычный вид «Сегодня».
   await page.goto("/schedule?day=2020-01-06");
   await expect(page.getByTestId("day-view")).toHaveCount(0);
+});
+
+test("ссылка «Почему так» в шапке у студента и сотрудника", async ({ page }) => {
+  await loginAs(page, "alina");
+  await page.goto("/");
+  await page.getByTestId("why-link").click();
+  await expect(page).toHaveURL(/\/why$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Почему так");
+  await page.context().clearCookies();
+  await loginAs(page, "mfc");
+  await page.goto("/staff");
+  await expect(page.getByTestId("why-link")).toHaveAttribute("href", "/why");
 });
