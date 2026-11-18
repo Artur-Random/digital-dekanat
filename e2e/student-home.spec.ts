@@ -206,6 +206,10 @@ test("расписание: «Завтра», выбор даты, пустые 
   await nav.getByRole("link", { name: "Завтра" }).click();
   await expect(page.getByTestId("day-view")).toHaveAttribute("data-date", addDays(today, 1));
 
+  // С «Завтра» можно выбрать и сегодняшнюю дату (замечание Codex в PR #49).
+  await expect(page.getByTestId("pick-date-input")).toHaveValue("");
+  await page.getByTestId("pick-date-input").fill(today);
+  await expect(page.getByTestId("day-view")).toHaveAttribute("data-date", today);
   // Выбор даты через календарь открывает этот день.
   const picked = addDays(today, 2);
   await page.getByTestId("pick-date-input").fill(picked);

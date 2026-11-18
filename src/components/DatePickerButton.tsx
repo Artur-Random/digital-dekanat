@@ -57,8 +57,9 @@ export function DatePickerButton({
         <span className="hidden md:inline">Выбрать дату</span>
       </button>
       <input
+        // Вне вида дня поле пустое: выбор любой даты, включая сегодня, вызывает переход.
         // key: после перехода поле сбрасывается, и повторный выбор той же даты снова срабатывает.
-        key={value}
+        key={value || "empty"}
         ref={input}
         type="date"
         tabIndex={inline ? 0 : -1}

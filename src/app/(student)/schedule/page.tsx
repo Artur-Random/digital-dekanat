@@ -93,7 +93,7 @@ export default async function SchedulePage({ searchParams }: Props) {
         <DatePickerButton
           min={year.start}
           max={year.end}
-          value={pickedDay ?? today}
+          value={pickedDay ?? ""}
           active={view === "day"}
           activeLabel={pickedDay ? formatDateKeyLong(pickedDay) : undefined}
         />
