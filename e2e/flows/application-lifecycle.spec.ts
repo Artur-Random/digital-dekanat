@@ -61,9 +61,19 @@ test("продление аттестации: подача → рассмотр
   const day = (await candidate.getAttribute("data-day")) ?? "";
   await candidate.locator('input[type="radio"]').check();
   await alina.getByRole("radio", { name: /Болезнь/ }).check();
+  await alina.getByRole("checkbox", { name: /Оригинал документа принесу/ }).check();
+  // Год 0230 (замечание Максима #47): поле ограничено, сервер отклоняет с понятным текстом.
+  const first = alina.getByLabel("Первый день", { exact: true });
+  await expect(first).toHaveAttribute("min", /^\d{4}-09-01$/);
+  await first.fill("0230-11-16");
+  await alina.getByLabel("Последний день", { exact: true }).fill(day);
+  await alina.getByRole("button", { name: "Отправить заявление о продлении" }).click();
+  await expect(alina.getByTestId("error-absenceFrom")).toContainText("Укажите дату с 1 сентября");
+  await candidate.locator('input[type="radio"]').check();
+  await alina.getByRole("radio", { name: /Болезнь/ }).check();
+  await alina.getByRole("checkbox", { name: /Оригинал документа принесу/ }).check();
   await alina.getByLabel("Первый день", { exact: true }).fill(day);
   await alina.getByLabel("Последний день", { exact: true }).fill(day);
-  await alina.getByRole("checkbox", { name: /Оригинал документа принесу/ }).check();
   await alina.getByRole("button", { name: "Отправить заявление о продлении" }).click();
 
   await expect(alina.getByTestId("created-banner")).toBeVisible();

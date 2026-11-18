@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { z } from "zod";
 
+import { DatePickerButton } from "@/components/DatePickerButton";
 import { ScheduleItemView } from "@/components/ScheduleItemView";
 import { TodayBlock } from "@/components/TodayBlock";
 import { formatDateKey, formatDateKeyLong } from "@/lib/format-date";
@@ -17,6 +18,7 @@ import {
 import { type StudentActor, requireStudent } from "@/server/auth/guards";
 import { listScheduleForStudent } from "@/server/dal/schedule";
 import { getRetakeRule } from "@/server/dal/study";
+import { academicYear } from "@/server/rules/academic-year";
 import { buildTodayView, buildWeekView } from "@/server/rules/schedule";
 
 export const metadata: Metadata = { title: "Расписание" };
@@ -29,7 +31,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const weekParam = z.string().refine(isDateKey);
 
 function tabClass(active: boolean): string {
-  return `inline-flex min-h-11 items-center rounded-md px-4 font-medium ${
+  // На 360 px вкладки и кнопка даты в одну строку: узкие отступы на телефоне.
+  return `inline-flex min-h-11 items-center rounded-md px-3 font-medium md:px-4 ${
     active ? "bg-accent text-accent-ink" : "border-border border"
   }`;
 }
@@ -40,20 +43,45 @@ export default async function SchedulePage({ searchParams }: Props) {
   const now = new Date();
   const today = todayInMoscow(now);
   const rawWeek = params.week;
-  const isWeek = params.view === "week" || rawWeek !== undefined;
+  const year = academicYear(today);
+  // Выбранный день: только текущий учебный год; иначе обычный вид «Сегодня».
+  const dayParam = weekParam.safeParse(params.day);
+  const pickedDay =
+    dayParam.success && dayParam.data >= year.start && dayParam.data <= year.end
+      ? dayParam.data
+      : null;
+  const tomorrow = addDays(today, 1);
+  const view: "today" | "tomorrow" | "day" | "week" = pickedDay
+    ? "day"
+    : params.view === "tomorrow"
+      ? "tomorrow"
+      : params.view === "week" || rawWeek !== undefined
+        ? "week"
+        : "today";
+  const isWeek = view === "week";
   const parsed = weekParam.safeParse(rawWeek);
   const weekStart: DateKey = mondayOf(parsed.success ? parsed.data : today);
 
   return (
     <>
       <h1 className="text-2xl font-semibold">Расписание</h1>
-      <nav aria-label="Вид расписания" className="mt-4 flex gap-2">
+      <nav
+        aria-label="Вид расписания"
+        className="mt-4 flex flex-nowrap items-center gap-2 overflow-x-auto"
+      >
         <Link
           href="/schedule"
-          aria-current={isWeek ? undefined : "page"}
-          className={tabClass(!isWeek)}
+          aria-current={view === "today" ? "page" : undefined}
+          className={tabClass(view === "today")}
         >
           Сегодня
+        </Link>
+        <Link
+          href="/schedule?view=tomorrow"
+          aria-current={view === "tomorrow" ? "page" : undefined}
+          className={tabClass(view === "tomorrow")}
+        >
+          Завтра
         </Link>
         <Link
           href="/schedule?view=week"
@@ -62,12 +90,21 @@ export default async function SchedulePage({ searchParams }: Props) {
         >
           Неделя
         </Link>
+        <DatePickerButton
+          min={year.start}
+          max={year.end}
+          value={pickedDay ?? ""}
+          active={view === "day"}
+          activeLabel={pickedDay ? formatDateKeyLong(pickedDay) : undefined}
+        />
       </nav>
       <div className="mt-6">
-        {isWeek ? (
+        {view === "week" ? (
           <Week actor={actor} actorWeek={weekStart} today={today} />
-        ) : (
+        ) : view === "today" ? (
           <Today actor={actor} now={now} />
+        ) : (
+          <Day actor={actor} day={pickedDay ?? tomorrow} today={today} />
         )}
       </div>
     </>
@@ -82,6 +119,47 @@ async function Today({ actor, now }: { actor: StudentActor; now: Date }) {
   );
   const view = buildTodayView(now, schedule.events, schedule.changes, schedule.calendar);
   return <TodayBlock view={view} retakeRule={await getRetakeRule(actor)} />;
+}
+
+/** Один день: «Завтра» или выбранная дата. */
+async function Day({ actor, day, today }: { actor: StudentActor; day: DateKey; today: DateKey }) {
+  const week = mondayOf(day);
+  const [schedule, retakeRule] = await Promise.all([
+    listScheduleForStudent(
+      actor,
+      moscowDateTime(week, "00:00"),
+      moscowDateTime(addDays(week, 7), "00:00"),
+    ),
+    getRetakeRule(actor),
+  ]);
+  const days = buildWeekView(week, schedule.events, schedule.changes, schedule.calendar);
+  const items = days.find((d) => d.date === day)?.items ?? [];
+  const weekEmpty = days.every((d) => d.items.length === 0);
+  return (
+    <section aria-labelledby="day-title" data-testid="day-view" data-date={day}>
+      <h2 id="day-title" className="text-lg font-semibold">
+        {formatDateKeyLong(day)}
+        {day === today ? <span className="text-accent"> · сегодня</span> : null}
+      </h2>
+      {items.length === 0 ? (
+        <p className="text-ink-muted mt-4" data-testid="day-empty">
+          {/* Будущая неделя без пар — расписание ещё не опубликовано; иначе в этот день пар нет. */}
+          {weekEmpty && week > mondayOf(today)
+            ? "Расписание на эту неделю ещё не опубликовано"
+            : "В этот день пар нет"}{" "}
+          <Link href={`/schedule?week=${week}`} className="text-accent underline">
+            Вся неделя
+          </Link>
+        </p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-2">
+          {items.map((item) => (
+            <ScheduleItemView key={item.anchor} item={item} retakeRule={retakeRule} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 async function Week({

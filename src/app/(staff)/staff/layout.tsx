@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Logo } from "@/components/Logo";
+import { WhyLink } from "@/components/WhyLink";
 import { LogoutButton } from "@/components/LogoutButton";
 import { requireStaff } from "@/server/auth/guards";
 import { getStaffProfile } from "@/server/dal/staff";
@@ -32,6 +33,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
               <ListTodo aria-hidden="true" className="size-5" />
               Очередь
             </Link>
+            <WhyLink />
             <Link
               href="/staff/profile"
               aria-label="Профиль"

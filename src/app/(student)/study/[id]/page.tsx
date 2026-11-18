@@ -76,7 +76,7 @@ export default async function DisciplinePage({ params }: Props) {
     <>
       <BackButton fallbackHref="/study" />
       <h1 className="mt-2 text-2xl font-semibold">{a.discipline.name}</h1>
-      <p className="text-ink-muted">Что будет, если…: сроки, последствия и что делать</p>
+      <p className="text-ink-muted">Сроки, последствия и что делать</p>
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
         <dt className="text-ink-muted">Контроль</dt>
         <dd>

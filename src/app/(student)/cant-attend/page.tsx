@@ -10,6 +10,7 @@ import { EVENT_TYPE_LABEL } from "@/lib/schedule-labels";
 import { requireStudent } from "@/server/auth/guards";
 import { getAbsenceContext, getApplicationTypeForStudent } from "@/server/dal/applications";
 import { listNorms } from "@/server/dal/norms";
+import { formDateBounds } from "@/server/rules/academic-year";
 import { absenceNoticeDeadline } from "@/server/rules/application-forms";
 
 export const metadata: Metadata = { title: "Не смогу прийти" };
@@ -72,6 +73,7 @@ export default async function CantAttendPage({ searchParams }: Props) {
         candidates={candidates}
         reasons={reasons}
         initialEventId={event.success ? event.data : null}
+        dateBounds={formDateBounds(ctx.today)}
         deadlineNorms={<NormQuotes codes={["N-04", "N-16"]} norms={norms} />}
         documentNorms={<NormQuotes codes={["N-06"]} norms={norms} />}
         periodNorms={<NormQuotes codes={["N-07"]} norms={norms} />}

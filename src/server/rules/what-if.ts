@@ -36,7 +36,7 @@ export type WhatIfInput = {
   /** Задолженность и её расчёт (debtTimeline). */
   debt: { formedAt: DateKey; afterAnnualSession: boolean; timeline: DebtTimeline } | null;
   rules: readonly RuleText[];
-  /** Обычная стипендия уже прекращена (stipendStatus): сценарий «удовлетворительно» не нужен. */
+  /** Государственная академическая стипендия уже прекращена (stipendStatus): сценарий «удовлетворительно» не нужен. */
   stipendStopped: boolean;
 };
 

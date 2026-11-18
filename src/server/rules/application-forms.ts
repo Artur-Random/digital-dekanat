@@ -5,6 +5,9 @@ import { z } from "zod";
 
 import { type DateKey, isDateKey } from "@/lib/moscow-date";
 
+import { formatDateKeyWithYear } from "@/lib/format-date";
+
+import { formDateBounds, isWithin } from "./academic-year";
 import { ABSENCE_NOTICE_WORKING_DAYS } from "./what-if";
 import { type ProductionCalendar, addWorkingDays } from "./working-days";
 
@@ -119,6 +122,11 @@ export function leaveExpulsionWarning(debts: readonly { stage: "STAGE_1" | "STAG
   return debts.some((d) => d.stage === "STAGE_2");
 }
 
+/** Текст ошибки даты вне допустимого периода: с конкретными датами. */
+export function dateRangeError(bounds: { min: DateKey; max: DateKey }): string {
+  return `Укажите дату с ${formatDateKeyWithYear(bounds.min)} по ${formatDateKeyWithYear(bounds.max)} (так устроено в прототипе).`;
+}
+
 // --- «Не смогу прийти»: продление срока аттестации ---------------------------------------
 
 /** До какой даты включительно можно сообщить о неявке на контроль в день controlDay. */
@@ -178,13 +186,21 @@ export function parseAbsenceForm(
   if (r.success) {
     const v = r.data;
     if (!context.reasons.includes(v.reason)) errors.reason = "Выберите причину.";
+    // Границы дат (так устроено в прототипе): без них проходил год 0230.
+    const bounds = formDateBounds(context.today);
+    const outOfRange = dateRangeError(bounds);
+    if (!isWithin(v.absenceFrom, bounds)) errors.absenceFrom = outOfRange;
+    if (!isWithin(v.absenceTo, bounds)) errors.absenceTo = outOfRange;
     if (!context.controlDay) {
       errors.eventId = "Выберите экзамен или пересдачу.";
     } else {
       if (context.today > absenceNoticeDeadline(context.controlDay, context.calendar)) {
         errors.eventId = "Срок сообщить о неявке по этому контролю уже прошёл.";
       }
-      if (context.controlDay < v.absenceFrom || context.controlDay > v.absenceTo) {
+      if (
+        !errors.absenceFrom &&
+        (context.controlDay < v.absenceFrom || context.controlDay > v.absenceTo)
+      ) {
         // Проверка прототипа: без неё заявление о продлении не связано с пропущенным контролем.
         errors.absenceFrom =
           "Дата контроля должна входить в период отсутствия (так устроено в прототипе).";

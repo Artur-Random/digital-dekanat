@@ -193,7 +193,9 @@ describe("whatIfScenarios", () => {
     const r = RULES.find((x) => x.trigger === "RETAKE_RAISED_STIPEND");
     // Формулировка Кирилла от 15.11.2026 (замечание Максима, #29).
     expect(r?.body).toContain("за учёбу только на «отлично» (две сессии подряд и больше)");
-    expect(r?.body).toContain("награды за проекты или победы в олимпиадах и конкурсах");
+    expect(r?.body).toContain(
+      "награды в проектной деятельности или победы в олимпиадах и конкурсах",
+    );
     expect(r?.normCodes).toEqual(["N-18", "N-23", "N-30"]);
   });
 });
