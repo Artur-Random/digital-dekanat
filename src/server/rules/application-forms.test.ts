@@ -130,6 +130,18 @@ describe("«Не смогу прийти»", () => {
       expect(r.errors.willBringOriginal).toBe("Отметьте, что принесёте оригинал документа.");
   });
 
+  it("даты вне учебного года и дальше года вперёд отклоняются с понятным текстом (#47)", () => {
+    const r = parseAbsenceForm(
+      { ...base, absenceFrom: "0230-11-16", absenceTo: "2028-01-10" },
+      { controlDay: "2026-11-17", reasons, today: "2026-11-17", calendar },
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.errors.absenceFrom).toBe("Укажите дату с 1 сентября 2026 по 17 ноября 2027.");
+      expect(r.errors.absenceTo).toBe("Укажите дату с 1 сентября 2026 по 17 ноября 2027.");
+    }
+  });
+
   it("дата окончания раньше начала", () => {
     const r = parseAbsenceForm(
       { ...base, absenceFrom: "2026-11-18", absenceTo: "2026-11-16" },

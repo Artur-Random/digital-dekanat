@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useActionState, useRef } from "react";
+import { type ReactNode, useActionState, useRef, useState } from "react";
 
 import { submitAbsence } from "@/app/(student)/applications/actions";
 import { EMPTY_FORM_STATE } from "@/lib/form-state";
@@ -32,6 +32,7 @@ export function AbsenceForm({
   candidates,
   reasons,
   initialEventId,
+  dateBounds,
   deadlineNorms,
   documentNorms,
   periodNorms,
@@ -39,6 +40,8 @@ export function AbsenceForm({
   candidates: AbsenceCandidateView[];
   reasons: AbsenceReasonView[];
   initialEventId: string | null;
+  /** Допустимые даты (учебный год … год вперёд); сервер проверяет те же границы. */
+  dateBounds: { min: string; max: string };
   deadlineNorms: ReactNode;
   documentNorms: ReactNode;
   periodNorms: ReactNode;
@@ -48,6 +51,8 @@ export function AbsenceForm({
   const v = state.values ?? {};
   const selected = v.eventId ?? initialEventId ?? "";
   const selectedDay = candidates.find((c) => c.id === selected)?.day ?? "";
+  // Последний день не раньше первого: min второго поля следует за первым.
+  const [fromDay, setFromDay] = useState(v.absenceFrom ?? selectedDay);
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state);
 
@@ -141,6 +146,9 @@ export function AbsenceForm({
               type="date"
               required
               defaultValue={v.absenceFrom ?? selectedDay}
+              min={dateBounds.min}
+              max={dateBounds.max}
+              onChange={(ev) => setFromDay(ev.target.value)}
               className={inputClass}
               {...describedBy("absenceFrom", false, e.absenceFrom)}
             />
@@ -152,6 +160,8 @@ export function AbsenceForm({
               type="date"
               required
               defaultValue={v.absenceTo ?? selectedDay}
+              min={fromDay && fromDay > dateBounds.min ? fromDay : dateBounds.min}
+              max={dateBounds.max}
               className={inputClass}
               {...describedBy("absenceTo", false, e.absenceTo)}
             />

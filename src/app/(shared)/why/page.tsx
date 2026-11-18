@@ -24,7 +24,7 @@ export default async function WhyPage({ searchParams }: Props) {
       <h1 className="mt-2 text-2xl font-semibold">Почему так</h1>
       <p className="text-ink-muted mt-2">
         Сроки и подсказки в кабинете взяты из положений МГПУ и закона. Здесь пункты, на которых они
-        основаны, дословно.
+        основаны, дословно. Пропущенные в оригинале знаки препинания добавлены в квадратных скобках.
       </p>
       {norms.length === 0 ? (
         <p className="text-ink-muted mt-4">Реестр норм пока пуст.</p>

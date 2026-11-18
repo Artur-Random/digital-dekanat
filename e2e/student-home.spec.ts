@@ -5,7 +5,8 @@
 
 import { type Page, expect, test } from "@playwright/test";
 
-import { mondayOf, todayInMoscow } from "../src/lib/moscow-date";
+import { addDays, mondayOf, todayInMoscow } from "../src/lib/moscow-date";
+import { academicYear } from "../src/server/rules/academic-year";
 
 import { loginAs } from "./auth";
 import {
@@ -182,4 +183,47 @@ test("360 px: нет горизонтального скролла, послед
     expect(result.scrollWidth, path).toBeLessThanOrEqual(result.clientWidth);
     expect(result.lastBottom, path).toBeLessThanOrEqual(result.navTop);
   }
+});
+
+test("расписание: «Завтра», выбор даты, пустые дни и неопубликованные недели (#43)", async ({
+  page,
+}) => {
+  const today = todayInMoscow();
+  const year = academicYear(today);
+  await page.setViewportSize({ width: 360, height: 800 });
+  await loginAs(page, "alina");
+  await page.goto("/schedule");
+
+  // На 360 px вкладки и кнопка даты в одну строку, без горизонтального скролла.
+  const nav = page.getByRole("navigation", { name: "Вид расписания" });
+  const tabs = nav.locator("a, button");
+  await expect(tabs).toHaveCount(4);
+  const tops = await tabs.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
+  expect(new Set(tops).size).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  await expect(page.getByRole("button", { name: "Выбрать дату" })).toBeVisible();
+
+  await nav.getByRole("link", { name: "Завтра" }).click();
+  await expect(page.getByTestId("day-view")).toHaveAttribute("data-date", addDays(today, 1));
+
+  // Выбор даты через календарь открывает этот день.
+  const picked = addDays(today, 2);
+  await page.getByTestId("pick-date-input").fill(picked);
+  await expect(page).toHaveURL(new RegExp(`/schedule\\?day=${picked}$`));
+  await expect(page.getByTestId("day-view")).toHaveAttribute("data-date", picked);
+  await expect(page.getByTestId("pick-date-input")).toHaveAttribute("min", year.start);
+  await expect(page.getByTestId("pick-date-input")).toHaveAttribute("max", year.end);
+
+  // Прошедший день без пар (неделя начала учебного года в сиде пустая) — «В этот день пар нет».
+  await page.goto(`/schedule?day=${year.start}`);
+  await expect(page.getByTestId("day-empty")).toHaveText("В этот день пар нет");
+  // Будущая неделя без расписания — прежний текст.
+  const lateSummer = addDays(year.end, -7);
+  await page.goto(`/schedule?day=${lateSummer}`);
+  await expect(page.getByTestId("day-empty")).toHaveText(
+    "Расписание на эту неделю ещё не опубликовано",
+  );
+  // Дата вне учебного года — обычный вид «Сегодня».
+  await page.goto("/schedule?day=2020-01-06");
+  await expect(page.getByTestId("day-view")).toHaveCount(0);
 });
