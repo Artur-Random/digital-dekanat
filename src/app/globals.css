@@ -110,11 +110,91 @@ html {
    в эмуляции Playwright env(safe-area-inset-top) всегда 0. */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Запас под статус-баром: iOS размывает верхний край страницы чуть ниже safe-area,
+     и первая строка плашки концепта выглядела бледной (Максим, iPhone, 20.11). */
+  --banner-gap: 0px;
+}
+
+/* Только iOS Safari (и «На экран Домой»): -webkit-touch-callout есть только там. */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --banner-gap: 0.75rem;
+  }
 }
 
 body {
   background-color: var(--color-surface);
   color: var(--color-ink);
+}
+
+/* Радиокнопки и чекбоксы на токенах: системные в тёмной теме iOS закрашены сплошным тёмным
+   и невыбранные выглядели выбранными (Максим, 20.11). Пустой круг/квадрат с рамкой.
+   В слое base: классы Tailwind (отступы, размер) у конкретных полей важнее. */
+@layer base {
+  input[type="radio"],
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-grid;
+    place-content: center;
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    border: 2px solid var(--color-ink-muted);
+    background-color: transparent;
+    color: var(--color-accent);
+  }
+  input[type="radio"] {
+    border-radius: 9999px;
+  }
+  input[type="checkbox"] {
+    border-radius: 0.25rem;
+  }
+  input[type="radio"]::before {
+    content: "";
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background-color: var(--color-accent);
+    transform: scale(0);
+  }
+  input[type="checkbox"]::before {
+    content: "";
+    width: 0.75rem;
+    height: 0.75rem;
+    background-color: var(--color-accent-ink);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transform: scale(0);
+  }
+  input[type="radio"]:checked {
+    border-color: var(--color-accent);
+  }
+  input[type="radio"]:checked::before,
+  input[type="checkbox"]:checked::before {
+    transform: scale(1);
+  }
+  input[type="checkbox"]:checked {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+  }
+  /* Высокая контрастность Windows: фон (точка, галочка) браузер перекрашивает — системный вид. */
+  @media (forced-colors: active) {
+    input[type="radio"],
+    input[type="checkbox"] {
+      appearance: auto;
+      -webkit-appearance: auto;
+    }
+    input[type="radio"]::before,
+    input[type="checkbox"]::before {
+      display: none;
+    }
+  }
+  input[type="radio"]:disabled,
+  input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 :focus-visible {
@@ -158,7 +238,7 @@ button:not(:disabled),
 }
 
 @utility safe-top {
-  padding-top: var(--safe-top);
+  padding-top: calc(var(--safe-top) + var(--banner-gap));
 }
 
 /* Сплошная полоска под статус-баром в режиме «На экран Домой»: контент при прокрутке
@@ -170,7 +250,7 @@ button:not(:disabled),
   right: 0;
   left: 0;
   z-index: 60;
-  height: var(--safe-top);
+  height: calc(var(--safe-top) + var(--banner-gap));
   background-color: var(--color-notice);
   pointer-events: none;
 }

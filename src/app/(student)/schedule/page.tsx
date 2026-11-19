@@ -187,27 +187,30 @@ async function Week({
         <h2 className="text-lg font-semibold" data-testid="week-title" data-week={actorWeek}>
           {formatDateKey(actorWeek)} — {formatDateKey(addDays(actorWeek, 6))}
         </h2>
-        <div className="flex flex-wrap gap-2">
+        {/* На телефоне в одну строку: стрелки с aria-label, «Текущая неделя» текстом. */}
+        <div className="flex flex-nowrap gap-2">
           <Link
             href={`/schedule?week=${prev}`}
-            className="border-border inline-flex min-h-11 items-center gap-1 rounded-md border px-3"
+            aria-label="Предыдущая неделя"
+            className="border-border inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-2 md:px-3"
           >
             <ChevronLeft aria-hidden="true" className="size-5" />
-            Предыдущая
+            <span className="hidden md:inline">Предыдущая</span>
           </Link>
           {mondayOf(today) !== actorWeek ? (
             <Link
               href={`/schedule?week=${mondayOf(today)}`}
-              className="border-border inline-flex min-h-11 items-center rounded-md border px-3"
+              className="border-border inline-flex min-h-11 items-center rounded-md border px-3 whitespace-nowrap"
             >
               Текущая неделя
             </Link>
           ) : null}
           <Link
             href={`/schedule?week=${next}`}
-            className="border-border inline-flex min-h-11 items-center gap-1 rounded-md border px-3"
+            aria-label="Следующая неделя"
+            className="border-border inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-2 md:px-3"
           >
-            Следующая
+            <span className="hidden md:inline">Следующая</span>
             <ChevronRight aria-hidden="true" className="size-5" />
           </Link>
         </div>

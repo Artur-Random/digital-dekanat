@@ -8,7 +8,8 @@ export function PasswordChangeDisabled() {
         type="button"
         disabled
         aria-describedby="password-disabled-note"
-        className="border-border text-ink-muted inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-md border px-4 font-medium"
+        data-testid="password-button"
+        className="border-border bg-surface-muted text-ink-muted inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-md border border-dashed px-4 font-medium opacity-60"
       >
         <Lock aria-hidden="true" className="size-5" />
         Сменить пароль
