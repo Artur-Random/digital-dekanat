@@ -83,3 +83,15 @@ test("плашка концепта целиком ниже статус-бар�
   const shield = await page.getByTestId("status-bar-shield").boundingBox();
   expect(shield?.height).toBe(SAFE_TOP + 12);
 });
+
+test("высокая контрастность: радиокнопки в системном виде", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto("/login");
+  const appearance = await page.evaluate(() => {
+    const r = document.createElement("input");
+    r.type = "radio";
+    document.body.append(r);
+    return getComputedStyle(r).appearance;
+  });
+  expect(appearance).toBe("auto");
+});

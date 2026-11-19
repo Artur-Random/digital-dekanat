@@ -178,6 +178,18 @@ body {
     border-color: var(--color-accent);
     background-color: var(--color-accent);
   }
+  /* Высокая контрастность Windows: фон (точка, галочка) браузер перекрашивает — системный вид. */
+  @media (forced-colors: active) {
+    input[type="radio"],
+    input[type="checkbox"] {
+      appearance: auto;
+      -webkit-appearance: auto;
+    }
+    input[type="radio"]::before,
+    input[type="checkbox"]::before {
+      display: none;
+    }
+  }
   input[type="radio"]:disabled,
   input[type="checkbox"]:disabled {
     opacity: 0.5;
