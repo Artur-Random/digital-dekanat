@@ -74,6 +74,10 @@ test("service worker: офлайн-страница без сети, после 
   });
   const allowed = /^\/(_next\/static\/|brand\/|icons\/|offline\.html$)/;
   expect(cached.filter((u) => !allowed.test(u))).toEqual([]);
+  // После выхода офлайн-страница снова в кеше: без сети покажется она, а не ошибка браузера.
+  await expect
+    .poll(() => page.evaluate(async () => Boolean(await caches.match("/offline.html"))))
+    .toBe(true);
 
   // «Назад» после выхода не показывает данные.
   await page.goBack();

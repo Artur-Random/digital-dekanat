@@ -15,14 +15,18 @@ export function ServiceWorkerRegister({ version }: { version: string }) {
   return null;
 }
 
-/** Очистка кешей при выходе: и в окне, и через service worker. */
+/**
+ * Очистка кешей при выходе. По очереди: сначала окно удаляет все кеши, затем service worker
+ * получает «clear» и снова кладёт офлайн-страницу. Параллельно окно могло бы стереть уже
+ * восстановленную офлайн-страницу (замечание Codex в PR #50).
+ */
 export async function clearAppCaches(): Promise<void> {
   try {
-    navigator.serviceWorker?.controller?.postMessage({ type: "clear" });
     if ("caches" in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
     }
+    navigator.serviceWorker?.controller?.postMessage({ type: "clear" });
   } catch {
     // Кеши недоступны (приватный режим и т. п.) — выходим всё равно.
   }
