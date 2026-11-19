@@ -31,7 +31,7 @@ test("«Выбрать дату»: нажатие приходится прям�
     );
     expect(hit).toBe("date");
   }
-  await button.locator('input').tap();
+  await button.locator("input").tap();
   await expect(page.getByTestId("pick-date-input")).toBeFocused();
   await expect(page.getByLabel("Выбрать дату")).toHaveAttribute("type", "date");
 });
