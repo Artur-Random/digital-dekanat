@@ -47,8 +47,9 @@ test("alina: «Сегодня» с «Изменено» и «было → ста
   await expect(feed).toContainText("Справка готова, забрать в МФЦ");
   await expect(feed.getByRole("link", { name: "426общ, п. 7.13: открыть цитату" })).toBeVisible();
 
+  // Счётчик сверяется с базой. Без требования «больше нуля»: при повторе в CI тест может идти
+  // после «Отметить все прочитанными», и тогда непрочитанных честно ноль.
   const unread = await unreadCount("alina");
-  expect(unread).toBeGreaterThan(0);
   await expect(page.getByTestId("bell")).toHaveAttribute(
     "aria-label",
     `Уведомления, непрочитанных: ${unread}`,
@@ -130,7 +131,7 @@ test("BackButton: прямой заход на /applications/<id> без ист�
 }) => {
   await loginAs(page, "alina");
   await page.goto(`/applications/${await applicationId("alina", "CERT_ENROLLMENT")}`);
-  await page.getByTestId("back-button").click();
+  await page.getByTestId("back-button").filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/applications$/);
 });
 
@@ -139,7 +140,7 @@ test("BackButton: после перехода внутри сайта возвр
   await page.goto("/schedule");
   await page.getByTestId("bell").click();
   await expect(page).toHaveURL(/\/notifications$/);
-  await page.getByTestId("back-button").click();
+  await page.getByTestId("back-button").filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/schedule$/);
 });
 
@@ -152,7 +153,8 @@ test("BackButton: после возврата к первому экрану в�
   await expect(page).toHaveURL(/\/schedule$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/notifications$/);
-  await page.getByTestId("back-button").click();
+  // Next 16 держит прошлый экран в DOM скрытым: кнопок «Назад» может быть две, нажимаем видимую.
+  await page.getByTestId("back-button").filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 
