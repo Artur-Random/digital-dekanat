@@ -1,6 +1,6 @@
 "use client";
 
-import "@fontsource-variable/golos-text";
+import "@/fonts/golos-text/golos-text.css";
 import "./globals.css";
 
 import { ConceptBanner } from "@/components/ConceptBanner";

@@ -14,7 +14,17 @@ const nextConfig: NextConfig = {
   // для агентов в этом репозитории CLAUDE.md, второй источник инструкций не нужен.
   agentRules: false,
   async headers() {
-    return [{ source: "/:path*", headers: buildSecurityHeaders(isDev) }];
+    return [
+      { source: "/:path*", headers: buildSecurityHeaders(isDev) },
+      // Service worker не кешируется браузером: новая версия подхватывается сразу.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
+    ];
   },
 };
 

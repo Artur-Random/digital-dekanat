@@ -1,22 +1,99 @@
 @import "tailwindcss";
 
-/* Базовые цветовые токены. Не дизайн-система: только нейтральные цвета и акцент
-   с контрастом не ниже WCAG AA на фоне --color-surface. */
-@theme {
+/* Дизайн-токены: палитра логотипа «Студкаб» (#14213D тёмно-синий, #7A1F35 бордовый,
+   #D4D7DD и #9AA0AA серые). Значения — CSS-переменные: светлая тема по умолчанию,
+   тёмная — data-theme="dark" на <html> или системная тёмная при data-theme="system".
+   Контраст текста и элементов не ниже WCAG AA проверяет e2e/a11y.spec.ts (axe). */
+:root {
+  color-scheme: light;
+  --c-surface: #ffffff;
+  --c-surface-muted: #f2f3f5;
+  --c-ink: #14213d;
+  --c-ink-muted: #4b5262;
+  --c-border: #d4d7dd;
+  --c-accent: #14213d;
+  --c-accent-ink: #ffffff;
+  --c-notice: #fff6d6;
+  --c-notice-ink: #4a3b00;
+  --c-ok: #146c2e;
+  --c-warn: #8a5a00;
+  --c-danger: #7a1f35;
+  --c-danger-ink: #ffffff;
+  --c-brand-muted: #9aa0aa;
+}
+
+/* Тёмная тема: фон — цвет фона логотипа logo-dark (#14213D), чтобы его белые и тёмные
+   просветы векторизации не были видны. Бордовый на тёмном слишком тёмный — розовый оттенок. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-surface: #14213d;
+  --c-surface-muted: #1d2c4d;
+  --c-ink: #eef0f3;
+  --c-ink-muted: #b3b8c2;
+  --c-border: #3a4870;
+  --c-accent: #d4d7dd;
+  --c-accent-ink: #14213d;
+  --c-ok: #7ed69b;
+  --c-warn: #f0c060;
+  --c-danger: #f2a7b8;
+  --c-danger-ink: #14213d;
+  --c-brand-muted: #9aa0aa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --c-surface: #14213d;
+    --c-surface-muted: #1d2c4d;
+    --c-ink: #eef0f3;
+    --c-ink-muted: #b3b8c2;
+    --c-border: #3a4870;
+    --c-accent: #d4d7dd;
+    --c-accent-ink: #14213d;
+    --c-ok: #7ed69b;
+    --c-warn: #f0c060;
+    --c-danger: #f2a7b8;
+    --c-danger-ink: #14213d;
+    --c-brand-muted: #9aa0aa;
+  }
+}
+
+@theme inline {
   --font-sans: "Golos Text Variable", system-ui, sans-serif;
 
-  --color-surface: #ffffff;
-  --color-surface-muted: #f4f5f7;
-  --color-ink: #1a1d23;
-  --color-ink-muted: #4b5262;
-  --color-border: #d5d9e0;
-  --color-accent: #1f4fd1;
-  --color-accent-ink: #ffffff;
-  --color-notice: #fff6d6;
-  --color-notice-ink: #4a3b00;
-  --color-ok: #146c2e;
-  --color-warn: #8a5a00;
-  --color-danger: #b42318;
+  --color-surface: var(--c-surface);
+  --color-surface-muted: var(--c-surface-muted);
+  --color-ink: var(--c-ink);
+  --color-ink-muted: var(--c-ink-muted);
+  --color-border: var(--c-border);
+  --color-accent: var(--c-accent);
+  --color-accent-ink: var(--c-accent-ink);
+  --color-notice: var(--c-notice);
+  --color-notice-ink: var(--c-notice-ink);
+  --color-ok: var(--c-ok);
+  --color-warn: var(--c-warn);
+  --color-danger: var(--c-danger);
+  --color-danger-ink: var(--c-danger-ink);
+  --color-brand-muted: var(--c-brand-muted);
+}
+
+/* Логотип для темы: на светлом фоне logo-light (тёмный текст), на тёмном logo-dark. */
+.logo-for-dark {
+  display: none;
+}
+:root[data-theme="dark"] .logo-for-light {
+  display: none;
+}
+:root[data-theme="dark"] .logo-for-dark {
+  display: inline-block;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .logo-for-light {
+    display: none;
+  }
+  :root[data-theme="system"] .logo-for-dark {
+    display: inline-block;
+  }
 }
 
 html {

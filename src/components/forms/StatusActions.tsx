@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { changeStatus } from "@/app/(staff)/staff/applications/actions";
 import { EMPTY_FORM_STATE } from "@/lib/form-state";
 
-import { FormMessage, describedBy, inputClass } from "./FormParts";
+import { FormMessage, describedBy, inputClass, useOfflineGuard } from "./FormParts";
 
 export type TransitionButton = { to: string; label: string; kind: "advance" | "reject" };
 
@@ -18,10 +18,17 @@ export function StatusActions({
   transitions: TransitionButton[];
 }) {
   const [state, action, pending] = useActionState(changeStatus, EMPTY_FORM_STATE);
+  const guard = useOfflineGuard();
   const e = state.errors ?? {};
   const hasReject = transitions.some((t) => t.kind === "reject");
   return (
-    <form action={action} className="flex flex-col gap-3" noValidate data-testid="status-actions">
+    <form
+      action={action}
+      onSubmit={guard.onSubmit}
+      className="flex flex-col gap-3"
+      noValidate
+      data-testid="status-actions"
+    >
       <input type="hidden" name="id" value={applicationId} />
       <div className="flex flex-col gap-1">
         <label htmlFor="comment" className="font-medium">
@@ -42,7 +49,12 @@ export function StatusActions({
           </p>
         ) : null}
       </div>
-      <FormMessage message={state.message} />
+      <FormMessage message={guard.offlineMessage ?? state.message} />
+      {pending ? (
+        <p role="status" className="text-ink-muted text-sm">
+          Сохраняем…
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {transitions.map((t) => (
           <button

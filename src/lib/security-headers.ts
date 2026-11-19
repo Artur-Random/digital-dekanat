@@ -12,6 +12,9 @@ export function buildContentSecurityPolicy(isDev: boolean): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "data:", "blob:"],
     "font-src": ["'self'"],
+    // PWA: service worker и manifest только со своего домена.
+    "worker-src": ["'self'"],
+    "manifest-src": ["'self'"],
     "connect-src": ["'self'", ...(isDev ? ["ws:"] : [])],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],

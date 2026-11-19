@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test --project=chromium --project=flows --project=lockout",
     "screenshots": "tsx scripts/screenshots.ts",
+    "brand:assets": "tsx scripts/brand-assets.ts",
     "postinstall": "prisma generate",
     "demo:reset": "tsx --conditions=react-server scripts/reset-demo.ts",
     "submission:archive": "bash scripts/make-source-archive.sh",
@@ -27,7 +28,6 @@
     "test:prod-smoke": "playwright test --project=prod-smoke"
   },
   "dependencies": {
-    "@fontsource-variable/golos-text": "5.3.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "argon2": "0.45.2",
@@ -42,6 +42,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "4.3.5",
     "@types/node": "22.19.1",

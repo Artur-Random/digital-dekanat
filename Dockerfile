@@ -29,6 +29,8 @@ ENV NODE_ENV=production \
     APP_VERSION=${APP_VERSION}
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
+# Логотипы, иконки PWA, service worker и офлайн-страница (дизайн-проход 19.11).
+COPY --from=build --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000
 CMD ["node", "server.js"]

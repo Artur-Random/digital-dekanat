@@ -93,6 +93,33 @@ async function main(): Promise<void> {
         await context.close();
       }
     }
+    // Основные экраны в тёмной теме (cookie темы, как после выбора в профиле).
+    const DARK = new Set([
+      "home",
+      "schedule-today",
+      "study",
+      "application-extension",
+      "staff-application",
+    ]);
+    for (const viewport of VIEWPORTS) {
+      for (const screen of SCREENS.filter((s) => DARK.has(s.slug))) {
+        const context = await browser.newContext({
+          viewport,
+          deviceScaleFactor: 1,
+          locale: "ru-RU",
+          timezoneId: "Europe/Moscow",
+          baseURL: BASE_URL,
+        });
+        await context.addCookies([{ name: "theme", value: "dark", url: BASE_URL }]);
+        const page = await context.newPage();
+        await prepareForScreen(page, screen);
+        await page.goto(await resolvePath(screen), { waitUntil: "networkidle" });
+        const file = join(outDir, `${screen.code}-${screen.slug}-${viewport.width}-dark.png`);
+        await page.screenshot({ path: file, fullPage: true });
+        console.log(file);
+        await context.close();
+      }
+    }
     // Эмуляция iPhone из Playwright: ширина, плотность пикселей, user agent. Отступы под вырез
     // эмуляция не показывает — их проверяет Кирилл на телефоне.
     for (const screen of SCREENS.filter((s) => s.iphone)) {

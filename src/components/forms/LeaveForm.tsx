@@ -20,6 +20,7 @@ import {
   describedBy,
   inputClass,
   useFocusFirstError,
+  useOfflineGuard,
 } from "./FormParts";
 
 function isBasis(value: string | undefined): value is LeaveBasis {
@@ -36,6 +37,7 @@ export function LeaveForm({
   warning?: ReactNode;
 }) {
   const [state, action, pending] = useActionState(submitAcademicLeave, EMPTY_FORM_STATE);
+  const guard = useOfflineGuard();
   const e = state.errors ?? {};
   const v = state.values ?? {};
   const [basis, setBasis] = useState<LeaveBasis | "">(isBasis(v.basis) ? v.basis : "");
@@ -45,7 +47,13 @@ export function LeaveForm({
   useFocusFirstError(formRef, state);
 
   return (
-    <form ref={formRef} action={action} className="mt-4 flex flex-col gap-4" noValidate>
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={guard.onSubmit}
+      className="mt-4 flex max-w-2xl flex-col gap-4"
+      noValidate
+    >
       {/* N-49 до полей: студент с долгом этапа II узнаёт о риске до того, как заполнит форму. */}
       {warning}
       <fieldset
@@ -103,7 +111,10 @@ export function LeaveForm({
           {previews[branch]}
         </div>
       ) : null}
-      <FormMessage message={state.message} prototypeNote={state.prototypeNote} />
+      <FormMessage
+        message={guard.offlineMessage ?? state.message}
+        prototypeNote={state.prototypeNote}
+      />
       <div>
         <SubmitButton pending={pending}>Подать заявление</SubmitButton>
       </div>

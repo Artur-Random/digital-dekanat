@@ -1,8 +1,11 @@
-import { Lock } from "lucide-react";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { LogoutButton } from "@/components/LogoutButton";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { THEME_COOKIE, parseTheme } from "@/lib/theme";
+import { PasswordChangeDisabled } from "@/components/PasswordChangeDisabled";
 import { FUNDING_LABEL, STUDY_FORM_LABEL } from "@/lib/labels";
 import { requireStudent } from "@/server/auth/guards";
 import { getStudentProfile } from "@/server/dal/students";
@@ -42,12 +45,9 @@ export default async function ProfilePage() {
         ])}
       </dl>
 
-      {/* Информационная строка, а не кнопка: смена пароля в демо отключена, переходить некуда. */}
-      <p className="text-ink-muted mt-8 flex items-start gap-2" data-testid="password-disabled">
-        <Lock aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-        Смена пароля отключена в демо-режиме: аккаунтом пользуются несколько экспертов
-      </p>
+      <PasswordChangeDisabled />
 
+      <ThemeSwitcher initial={parseTheme((await cookies()).get(THEME_COOKIE)?.value)} />
       <div className="mt-8">
         <LogoutButton />
       </div>
