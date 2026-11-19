@@ -1,0 +1,5 @@
+# Ложные срабатывания gitleaks: фиктивные ключи в тесте маскировки секретов хука (.claude/hooks/log-prompt.test.ts).
+445654bf1e2e0b832c80215a96a987adb8397329:.claude/hooks/log-prompt.test.ts:aws-access-token:28
+445654bf1e2e0b832c80215a96a987adb8397329:.claude/hooks/log-prompt.test.ts:private-key:41
+df1a4d388f704a99b1b5542d6723ad1a4d6dedf4:.claude/hooks/log-prompt.test.ts:aws-access-token:28
+df1a4d388f704a99b1b5542d6723ad1a4d6dedf4:.claude/hooks/log-prompt.test.ts:private-key:41
