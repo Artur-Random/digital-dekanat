@@ -97,7 +97,9 @@ async function main(): Promise<void> {
     const DARK = new Set([
       "home",
       "schedule-today",
+      "schedule-week",
       "study",
+      "profile",
       "application-extension",
       "staff-application",
     ]);

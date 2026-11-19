@@ -198,12 +198,12 @@ test("расписание: «Завтра», выбор даты, пустые 
 
   // На 360 px вкладки и кнопка даты в одну строку, без горизонтального скролла.
   const nav = page.getByRole("navigation", { name: "Вид расписания" });
-  const tabs = nav.locator("a, button");
+  const tabs = nav.locator("a, [data-testid=pick-date]");
   await expect(tabs).toHaveCount(4);
   const tops = await tabs.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
   expect(new Set(tops).size).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
-  await expect(page.getByRole("button", { name: "Выбрать дату" })).toBeVisible();
+  await expect(page.getByLabel("Выбрать дату")).toBeVisible();
 
   await nav.getByRole("link", { name: "Завтра" }).click();
   await expect(page.getByTestId("day-view")).toHaveAttribute("data-date", addDays(today, 1));
