@@ -37,7 +37,7 @@ export default async function NotificationsPage() {
   }
 
   return (
-    <>
+    <div className="max-w-4xl">
       <BackButton fallbackHref="/" />
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Уведомления</h1>
@@ -112,6 +112,6 @@ export default async function NotificationsPage() {
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }

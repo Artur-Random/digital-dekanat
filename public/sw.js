@@ -52,7 +52,9 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(
+      fetch(request).catch(() => caches.match(OFFLINE_URL).then((hit) => hit || Response.error())),
+    );
     return;
   }
   if (isStatic(url)) {
@@ -74,6 +76,15 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "clear") {
-    event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
+    // Удалить все кеши и снова положить офлайн-страницу: без неё обрыв сети после выхода
+    // показал бы ошибку браузера.
+    event.waitUntil(
+      caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .then(() => caches.open(STATIC_CACHE))
+        .then((cache) => cache.add(OFFLINE_URL))
+        .catch(() => undefined),
+    );
   }
 });

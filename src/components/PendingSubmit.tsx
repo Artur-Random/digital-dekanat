@@ -22,7 +22,7 @@ export function PendingSubmit({
       disabled={pending}
       aria-busy={pending || undefined}
       aria-label={ariaLabel && !pending ? ariaLabel : pending ? pendingText : undefined}
-      className={`${className} disabled:opacity-70`}
+      className={`${className} disabled:cursor-wait`}
     >
       {pending && !ariaLabel ? pendingText : children}
     </button>

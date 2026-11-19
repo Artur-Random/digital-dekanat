@@ -19,7 +19,7 @@ export default async function WhyPage({ searchParams }: Props) {
   const q = queryParam.safeParse((await searchParams).q);
   const norms = await listNorms(user);
   return (
-    <>
+    <div className="max-w-4xl">
       <BackButton fallbackHref={user.role === "STAFF" ? "/staff" : "/"} />
       <h1 className="mt-2 text-2xl font-semibold">Почему так</h1>
       <p className="text-ink-muted mt-2">
@@ -31,6 +31,6 @@ export default async function WhyPage({ searchParams }: Props) {
       ) : (
         <NormsSearch norms={norms} initialQuery={q.success ? q.data : ""} />
       )}
-    </>
+    </div>
   );
 }

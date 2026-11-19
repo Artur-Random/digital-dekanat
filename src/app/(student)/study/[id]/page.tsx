@@ -73,7 +73,7 @@ export default async function DisciplinePage({ params }: Props) {
   const norms = new Map((await listNorms(actor, codes)).map((n) => [n.code, n]));
 
   return (
-    <>
+    <div className="max-w-4xl">
       <BackButton fallbackHref="/study" />
       <h1 className="mt-2 text-2xl font-semibold">{a.discipline.name}</h1>
       <p className="text-ink-muted">Сроки, последствия и что делать</p>
@@ -209,6 +209,6 @@ export default async function DisciplinePage({ params }: Props) {
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }

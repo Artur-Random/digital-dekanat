@@ -167,3 +167,5 @@
 ## PWA
 
 Требования: [docs/pwa-requirements.md](pwa-requirements.md). Название на домашнем экране: Студкаб (утверждено).
+
+Сделано в дизайн-проходе 19.11: manifest (`src/app/manifest.ts`), иконки из `studcab-icon-square.svg` (192, 512, maskable 512, apple-touch-icon 180; `npm run brand:assets`), service worker `public/sw.js` с офлайн-страницей `public/offline.html`, очистка кешей при выходе, CSP `worker-src`/`manifest-src`, аварийный выключатель в docs/deploy.md. Заголовок Clear-Site-Data при выходе не ставится: выход — Server Action, кеши очищаются на клиенте до него.

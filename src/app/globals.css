@@ -15,6 +15,9 @@
   --c-accent-ink: #ffffff;
   --c-notice: #fff6d6;
   --c-notice-ink: #4a3b00;
+  /* Подсветка (пересдача в расписании, норма после перехода по чипу): в тёмной теме своя,
+     плашка концепта остаётся жёлтой в обеих темах. */
+  --c-highlight: #fff6d6;
   --c-ok: #146c2e;
   --c-warn: #8a5a00;
   --c-danger: #7a1f35;
@@ -33,6 +36,7 @@
   --c-border: #3a4870;
   --c-accent: #d4d7dd;
   --c-accent-ink: #14213d;
+  --c-highlight: #3a3214;
   --c-ok: #7ed69b;
   --c-warn: #f0c060;
   --c-danger: #f2a7b8;
@@ -50,6 +54,7 @@
     --c-border: #3a4870;
     --c-accent: #d4d7dd;
     --c-accent-ink: #14213d;
+    --c-highlight: #3a3214;
     --c-ok: #7ed69b;
     --c-warn: #f0c060;
     --c-danger: #f2a7b8;
@@ -70,6 +75,7 @@
   --color-accent-ink: var(--c-accent-ink);
   --color-notice: var(--c-notice);
   --color-notice-ink: var(--c-notice-ink);
+  --color-highlight: var(--c-highlight);
   --color-ok: var(--c-ok);
   --color-warn: var(--c-warn);
   --color-danger: var(--c-danger);
@@ -125,7 +131,7 @@ button:not(:disabled),
 /* Норма, к которой перешли по чипу: подсветка на пару секунд (NormsSearch). */
 @keyframes norm-flash {
   from {
-    background-color: var(--color-notice);
+    background-color: var(--color-highlight);
   }
   to {
     background-color: transparent;
@@ -140,7 +146,7 @@ button:not(:disabled),
 @media (prefers-reduced-motion: reduce) {
   .norm-flash {
     animation: none;
-    background-color: var(--color-notice);
+    background-color: var(--color-highlight);
   }
 }
 

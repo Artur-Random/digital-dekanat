@@ -29,7 +29,7 @@ export default async function ProfilePage() {
   ];
 
   return (
-    <>
+    <div className="max-w-4xl">
       <h1 className="text-2xl font-semibold" data-testid="profile-name">
         {profile.fullName}
       </h1>
@@ -51,6 +51,6 @@ export default async function ProfilePage() {
       <div className="mt-8">
         <LogoutButton />
       </div>
-    </>
+    </div>
   );
 }
