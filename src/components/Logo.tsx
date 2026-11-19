@@ -1,18 +1,27 @@
-/** Собственный знак прототипа: не связан с логотипом МГПУ. */
-export function Logo() {
+/**
+ * Логотип «Студкаб» (собственный, не связан с логотипом МГПУ). Два файла под фон темы:
+ * logo-light — тёмный текст для светлого фона, logo-dark — светлый для тёмного (globals.css).
+ */
+export function Logo({ size = "header" }: { size?: "header" | "large" }) {
+  const height = size === "large" ? "h-12" : "h-9";
   return (
-    <span className="inline-flex items-center gap-2 font-semibold">
-      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6">
-        <rect x="2" y="2" width="20" height="20" rx="6" className="fill-accent" />
-        <path
-          d="M8 7v10M8 12l6-5M8 12l6 5"
-          className="stroke-accent-ink"
-          strokeWidth="2"
-          fill="none"
-          strokeLinecap="round"
-        />
-      </svg>
-      <span>Студкаб</span>
+    <span className="inline-flex items-center">
+      {/* eslint-disable-next-line @next/next/no-img-element -- SVG из public, оптимизация не нужна */}
+      <img
+        src="/brand/studcab-logo-light.svg"
+        alt="Студкаб"
+        width={291}
+        height={100}
+        className={`logo-for-light ${height} w-auto`}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element -- то же для тёмной темы */}
+      <img
+        src="/brand/studcab-logo-dark.svg"
+        alt="Студкаб"
+        width={291}
+        height={100}
+        className={`logo-for-dark ${height} w-auto`}
+      />
     </span>
   );
 }

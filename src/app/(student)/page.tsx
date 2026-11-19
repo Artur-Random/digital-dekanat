@@ -90,36 +90,41 @@ export default async function StudentHomePage() {
   return (
     <>
       <h1 className="sr-only">Главная</h1>
-      <section aria-labelledby="today-title">
-        <h2 id="today-title" className="text-xl font-semibold">
-          Сегодня
-        </h2>
-        <div className="mt-2">
-          <Suspense fallback={<SectionSkeleton label="Загружаем расписание" />}>
-            <Today actor={actor} now={now} />
-          </Suspense>
+      {/* ПК от 1280 px: «Сегодня» слева, «Нужно сделать» и «Мои заявки» справа. */}
+      <div className="grid gap-8 xl:grid-cols-2 xl:items-start">
+        <section aria-labelledby="today-title">
+          <h2 id="today-title" className="text-xl font-semibold">
+            Сегодня
+          </h2>
+          <div className="mt-2">
+            <Suspense fallback={<SectionSkeleton label="Загружаем расписание" />}>
+              <Today actor={actor} now={now} />
+            </Suspense>
+          </div>
+        </section>
+        <div className="flex flex-col gap-8">
+          <section aria-labelledby="todo-title">
+            <h2 id="todo-title" className="text-xl font-semibold">
+              Нужно сделать
+            </h2>
+            <div className="mt-3">
+              <Suspense fallback={<SectionSkeleton label="Загружаем задачи" />}>
+                <Feed actor={actor} now={now} />
+              </Suspense>
+            </div>
+          </section>
+          <section aria-labelledby="apps-title">
+            <h2 id="apps-title" className="text-xl font-semibold">
+              Мои заявки
+            </h2>
+            <div className="mt-3">
+              <Suspense fallback={<SectionSkeleton label="Загружаем заявки" />}>
+                <MyApplications actor={actor} />
+              </Suspense>
+            </div>
+          </section>
         </div>
-      </section>
-      <section aria-labelledby="todo-title" className="mt-8">
-        <h2 id="todo-title" className="text-xl font-semibold">
-          Нужно сделать
-        </h2>
-        <div className="mt-3">
-          <Suspense fallback={<SectionSkeleton label="Загружаем задачи" />}>
-            <Feed actor={actor} now={now} />
-          </Suspense>
-        </div>
-      </section>
-      <section aria-labelledby="apps-title" className="mt-8">
-        <h2 id="apps-title" className="text-xl font-semibold">
-          Мои заявки
-        </h2>
-        <div className="mt-3">
-          <Suspense fallback={<SectionSkeleton label="Загружаем заявки" />}>
-            <MyApplications actor={actor} />
-          </Suspense>
-        </div>
-      </section>
+      </div>
     </>
   );
 }

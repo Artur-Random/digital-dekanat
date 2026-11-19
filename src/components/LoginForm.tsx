@@ -5,15 +5,23 @@ import { useActionState } from "react";
 
 import { type LoginState, loginAction } from "@/server/auth/actions";
 
+import { useOfflineGuard } from "./forms/FormParts";
+
 type LoginFormProps = { next: string | null };
 
 const initialState: LoginState = { error: null, login: "" };
 
 export function LoginForm({ next }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
+  const guard = useOfflineGuard();
 
   return (
-    <form action={formAction} className="mt-6 flex flex-col gap-4" noValidate>
+    <form
+      action={formAction}
+      onSubmit={guard.onSubmit}
+      className="mt-6 flex flex-col gap-4"
+      noValidate
+    >
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <div className="flex flex-col gap-1">
         <label htmlFor="login" className="font-medium">
@@ -49,7 +57,7 @@ export function LoginForm({ next }: LoginFormProps) {
         />
       </div>
       <p id="login-error" role="alert" className="text-danger min-h-6" data-testid="login-error">
-        {state.error}
+        {guard.offlineMessage ?? state.error}
       </p>
       <button
         type="submit"

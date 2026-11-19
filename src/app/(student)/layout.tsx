@@ -16,7 +16,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-border border-b">
-        <div className="safe-x mx-auto flex max-w-5xl items-center justify-between py-1">
+        <div className="safe-x mx-auto flex max-w-[96rem] items-center justify-between py-1 lg:px-8">
           <Link href="/" className="inline-flex min-h-11 items-center">
             <Logo />
           </Link>
@@ -33,7 +33,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
               {unread > 0 ? (
                 <span
                   aria-hidden="true"
-                  className="bg-danger absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold text-white"
+                  className="bg-danger text-danger-ink absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-semibold"
                 >
                   {unread > 99 ? "99+" : unread}
                 </span>
@@ -42,10 +42,14 @@ export default async function StudentLayout({ children }: { children: React.Reac
           </div>
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-5xl flex-1">
+      <div className="mx-auto flex w-full max-w-[96rem] flex-1">
         <StudentNav />
         {/* Нижний отступ на телефоне: контент не прячется под панелью вкладок. */}
-        <main id="main" tabIndex={-1} className="safe-x pb-under-nav min-w-0 flex-1 pt-6 md:pb-8">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="safe-x pb-under-nav min-w-0 flex-1 pt-6 md:pb-8 lg:px-8"
+        >
           {children}
         </main>
         <BackToTop aboveNav />

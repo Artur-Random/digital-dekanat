@@ -157,3 +157,23 @@ systemctl list-timers dekanat-reset.timer
 
 - На развёрнутом сайте нельзя запускать тесты с входом под демо-аккаунтами и тесты блокировки входа: они заблокируют демо-аккаунты экспертам. В `deploy.yml` идут только проверки без входа (`npm run test:prod-smoke`).
 - Демо-пароли, ключи, IP сервера и содержимое `.env` не попадают в репозиторий, логи Actions и чаты.
+
+## Аварийный выключатель service worker (PWA)
+
+Если service worker сломал сайт у пользователей (например, отдаёт старую офлайн-страницу), замените `public/sw.js` версией, которая удаляет себя и все кеши, и задеплойте как обычно. `sw.js` отдаётся с `Cache-Control: no-cache`, браузер подхватит его при следующем открытии сайта:
+
+```js
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => self.registration.unregister())
+      .then(() => self.clients.matchAll())
+      .then((clients) => clients.forEach((c) => c.navigate(c.url))),
+  );
+});
+```
+
+Данных пользователей в кешах нет (кешируется только статика: `/_next/static`, `/brand`, `/icons`, `/offline.html`), поэтому выключатель нужен только при ошибке в самом service worker.

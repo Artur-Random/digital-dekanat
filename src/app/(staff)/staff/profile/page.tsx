@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { LogoutButton } from "@/components/LogoutButton";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 import { requireStaff } from "@/server/auth/guards";
 import { getStaffProfile } from "@/server/dal/staff";
 
@@ -13,7 +16,7 @@ export default async function StaffProfilePage() {
   if (!profile) notFound();
 
   return (
-    <>
+    <div className="max-w-4xl">
       <h1 className="text-2xl font-semibold" data-testid="profile-name">
         {profile.fullName}
       </h1>
@@ -23,9 +26,10 @@ export default async function StaffProfilePage() {
         <dt className="text-ink-muted">Подразделение</dt>
         <dd>{profile.unit.name}</dd>
       </dl>
+      <ThemeSwitcher initial={parseTheme((await cookies()).get(THEME_COOKIE)?.value)} />
       <div className="mt-8">
         <LogoutButton />
       </div>
-    </>
+    </div>
   );
 }

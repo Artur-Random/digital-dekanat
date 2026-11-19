@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: Props) {
       id="main"
       className="safe-x mx-auto w-full max-w-sm flex-1 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]"
     >
-      <Logo />
+      <Logo size="large" />
       <h1 className="mt-6 text-2xl font-semibold">Вход</h1>
       <p className="text-ink-muted mt-2">
         Логин и пароль демо-аккаунта указаны в комментарии к работе.

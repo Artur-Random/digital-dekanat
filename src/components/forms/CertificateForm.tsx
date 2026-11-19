@@ -12,16 +12,24 @@ import {
   describedBy,
   inputClass,
   useFocusFirstError,
+  useOfflineGuard,
 } from "./FormParts";
 
 export function CertificateForm({ typeCode }: { typeCode: string }) {
   const [state, action, pending] = useActionState(submitCertificate, EMPTY_FORM_STATE);
+  const guard = useOfflineGuard();
   const e = state.errors ?? {};
   const v = state.values ?? {};
   const formRef = useRef<HTMLFormElement>(null);
   useFocusFirstError(formRef, state);
   return (
-    <form ref={formRef} action={action} className="mt-4 flex flex-col gap-4" noValidate>
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={guard.onSubmit}
+      className="mt-4 flex max-w-2xl flex-col gap-4"
+      noValidate
+    >
       <input type="hidden" name="typeCode" value={typeCode} />
       <Field id="destination" label="Куда нужна справка" error={e.destination}>
         <input
@@ -50,7 +58,10 @@ export function CertificateForm({ typeCode }: { typeCode: string }) {
           {...describedBy("copies", false, e.copies)}
         />
       </Field>
-      <FormMessage message={state.message} prototypeNote={state.prototypeNote} />
+      <FormMessage
+        message={guard.offlineMessage ?? state.message}
+        prototypeNote={state.prototypeNote}
+      />
       <div>
         <SubmitButton pending={pending}>Заказать справку</SubmitButton>
       </div>

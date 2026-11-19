@@ -18,7 +18,10 @@ export default async function StaffQueuePage() {
     <>
       <h1 className="text-2xl font-semibold">Очередь заявок</h1>
       {applications.length === 0 ? (
-        <p className="text-ink-muted mt-4">В очереди подразделения заявок нет.</p>
+        <p className="text-ink-muted mt-4" data-testid="queue-empty">
+          В очереди подразделения заявок нет. Новые заявки студентов появятся здесь сразу после
+          подачи.
+        </p>
       ) : (
         <ul className="mt-4 flex flex-col gap-2">
           {applications.map((app) => (

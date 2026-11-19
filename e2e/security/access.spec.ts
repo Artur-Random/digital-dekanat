@@ -5,7 +5,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAs, passwordFor, submitLogin } from "../auth";
 import { BASE_URL } from "../base-url";
-import { applicationId, clearLoginAttempts, disconnect } from "../helpers/db";
+import { applicationId, disconnect } from "../helpers/db";
 
 test.describe.configure({ mode: "serial" });
 
@@ -28,8 +28,9 @@ test.beforeAll(async () => {
   };
 });
 
+// Попытки входа чистит e2e/global-setup.ts до и после прогона: очистка здесь, параллельно
+// с входами в других тестах, удаляла запись попытки на лету (гонка, задача 7).
 test.afterAll(async () => {
-  for (const login of ["alina", "denis", "no-such-user"]) await clearLoginAttempts(login);
   await disconnect();
 });
 

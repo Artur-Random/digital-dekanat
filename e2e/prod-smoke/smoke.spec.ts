@@ -84,3 +84,14 @@ test("/login: 200, плашка, заголовки, без внешних за�
   expect(foreign).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });
+
+test("PWA: manifest и service worker отвечают 200 с правильным типом", async () => {
+  const ctx = await request.newContext({ ignoreHTTPSErrors });
+  const manifest = await ctx.get(`${BASE}/manifest.webmanifest`);
+  expect(manifest.status()).toBe(200);
+  expect(manifest.headers()["content-type"]).toContain("application/manifest+json");
+  const sw = await ctx.get(`${BASE}/sw.js`);
+  expect(sw.status()).toBe(200);
+  expect(sw.headers()["content-type"]).toContain("javascript");
+  await ctx.dispose();
+});

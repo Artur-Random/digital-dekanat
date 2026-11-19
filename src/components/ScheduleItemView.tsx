@@ -65,7 +65,7 @@ export function ScheduleItemView({
       data-status={item.status}
       data-pair={item.pair ?? undefined}
       className={`scroll-mt-[calc(6rem+var(--safe-top))] rounded-md border p-3 ${
-        item.isRetake ? "border-warn bg-notice" : "border-border"
+        item.isRetake ? "border-warn bg-highlight" : "border-border"
       } ${item.status === "now" ? "border-l-accent border-l-4" : ""} ${
         item.status === "past" ? "text-ink-muted" : ""
       }`}

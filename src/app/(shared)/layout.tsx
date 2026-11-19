@@ -11,7 +11,7 @@ export default async function SharedLayout({ children }: { children: React.React
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-border border-b">
-        <div className="safe-x mx-auto flex max-w-5xl items-center justify-between py-1">
+        <div className="safe-x mx-auto flex max-w-[96rem] items-center justify-between py-1 lg:px-8">
           <Link
             href={user.role === "STAFF" ? "/staff" : "/"}
             className="inline-flex min-h-11 items-center"
@@ -23,7 +23,7 @@ export default async function SharedLayout({ children }: { children: React.React
       <main
         id="main"
         tabIndex={-1}
-        className="safe-x mx-auto w-full max-w-5xl flex-1 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+        className="safe-x mx-auto w-full max-w-[96rem] flex-1 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:px-8"
       >
         {children}
       </main>

@@ -47,8 +47,9 @@ test("alina: «Сегодня» с «Изменено» и «было → ста
   await expect(feed).toContainText("Справка готова, забрать в МФЦ");
   await expect(feed.getByRole("link", { name: "426общ, п. 7.13: открыть цитату" })).toBeVisible();
 
+  // Счётчик сверяется с базой. Без требования «больше нуля»: при повторе в CI тест может идти
+  // после «Отметить все прочитанными», и тогда непрочитанных честно ноль.
   const unread = await unreadCount("alina");
-  expect(unread).toBeGreaterThan(0);
   await expect(page.getByTestId("bell")).toHaveAttribute(
     "aria-label",
     `Уведомления, непрочитанных: ${unread}`,
@@ -130,7 +131,7 @@ test("BackButton: прямой заход на /applications/<id> без ист�
 }) => {
   await loginAs(page, "alina");
   await page.goto(`/applications/${await applicationId("alina", "CERT_ENROLLMENT")}`);
-  await page.getByTestId("back-button").click();
+  await page.getByTestId("back-button").filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/applications$/);
 });
 
@@ -139,7 +140,7 @@ test("BackButton: после перехода внутри сайта возвр
   await page.goto("/schedule");
   await page.getByTestId("bell").click();
   await expect(page).toHaveURL(/\/notifications$/);
-  await page.getByTestId("back-button").click();
+  await page.getByTestId("back-button").filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/schedule$/);
 });
 
@@ -152,7 +153,8 @@ test("BackButton: после возврата к первому экрану в�
   await expect(page).toHaveURL(/\/schedule$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/notifications$/);
-  await page.getByTestId("back-button").click();
+  // Next 16 держит прошлый экран в DOM скрытым: кнопок «Назад» может быть две, нажимаем видимую.
+  await page.getByTestId("back-button").filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 
@@ -242,4 +244,50 @@ test("ссылка «Почему так» в шапке у студента и 
   await loginAs(page, "mfc");
   await page.goto("/staff");
   await expect(page.getByTestId("why-link")).toHaveAttribute("href", "/why");
+});
+
+test("потеря сети при отправке формы: понятное сообщение у формы, данные не теряются", async ({
+  page,
+  context,
+}) => {
+  await loginAs(page, "alina");
+  await page.goto("/applications/new/CERT_GRADES", { waitUntil: "networkidle" });
+  await page.getByLabel("Куда нужна справка").fill("По месту требования");
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Заказать справку" }).click();
+  await expect(page.getByTestId("form-message")).toContainText("Нет соединения с интернетом");
+  await expect(page.getByLabel("Куда нужна справка")).toHaveValue("По месту требования");
+  await context.setOffline(false);
+});
+
+test("тема: «Как в системе» по умолчанию, выбор в профиле сохраняется в cookie и сразу в HTML", async ({
+  page,
+  context,
+}) => {
+  await loginAs(page, "alina");
+  await page.goto("/profile");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "system");
+  await expect(page.getByRole("radio", { name: "Как в системе" })).toBeChecked();
+  await page.getByRole("radio", { name: "Тёмная" }).check();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  // После перезагрузки сервер сразу отдаёт тёмную тему: без мелькания белого.
+  const response = await page.request.get("/");
+  expect(await response.text()).toContain('data-theme="dark"');
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(20, 33, 61)");
+  // Логотип для тёмного фона.
+  await expect(page.locator("header img.logo-for-dark")).toBeVisible();
+  await expect(page.locator("header img.logo-for-light")).toBeHidden();
+  await page.getByRole("radio", { name: "Светлая" }).check();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await context.clearCookies();
+});
+
+test("профиль: «Сменить пароль» неактивна с объяснением", async ({ page }) => {
+  await loginAs(page, "alina");
+  await page.goto("/profile");
+  const button = page.getByRole("button", { name: "Сменить пароль" });
+  await expect(button).toBeDisabled();
+  await expect(page.getByText("В демоверсии пароли общие, смена отключена")).toBeVisible();
 });

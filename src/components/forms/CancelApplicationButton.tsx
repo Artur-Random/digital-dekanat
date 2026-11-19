@@ -11,7 +11,7 @@ function ConfirmButton() {
     <button
       type="submit"
       disabled={pending}
-      className="bg-danger inline-flex min-h-11 items-center rounded-md px-4 font-medium text-white disabled:opacity-70"
+      className="bg-danger text-danger-ink inline-flex min-h-11 items-center rounded-md px-4 font-medium disabled:opacity-70"
     >
       {pending ? "Отменяем…" : "Отменить заявку"}
     </button>

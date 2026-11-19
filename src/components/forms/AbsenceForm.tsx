@@ -13,6 +13,7 @@ import {
   describedBy,
   inputClass,
   useFocusFirstError,
+  useOfflineGuard,
 } from "./FormParts";
 
 export type AbsenceCandidateView = {
@@ -47,6 +48,7 @@ export function AbsenceForm({
   periodNorms: ReactNode;
 }) {
   const [state, action, pending] = useActionState(submitAbsence, EMPTY_FORM_STATE);
+  const guard = useOfflineGuard();
   const e = state.errors ?? {};
   const v = state.values ?? {};
   const selected = v.eventId ?? initialEventId ?? "";
@@ -71,7 +73,13 @@ export function AbsenceForm({
   }
 
   return (
-    <form ref={formRef} action={action} className="mt-4 flex flex-col gap-6" noValidate>
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={guard.onSubmit}
+      className="mt-4 flex max-w-2xl flex-col gap-6"
+      noValidate
+    >
       <fieldset
         className="flex flex-col gap-2"
         aria-describedby={e.eventId ? "eventId-error" : undefined}
@@ -188,7 +196,10 @@ export function AbsenceForm({
         ) : null}
       </fieldset>
 
-      <FormMessage message={state.message} prototypeNote={state.prototypeNote} />
+      <FormMessage
+        message={guard.offlineMessage ?? state.message}
+        prototypeNote={state.prototypeNote}
+      />
       <div>
         <SubmitButton pending={pending}>Отправить заявление о продлении</SubmitButton>
       </div>

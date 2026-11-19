@@ -184,7 +184,8 @@ docs/                      spec, реестр норм, process/, licenses.md
 - `npm run test:e2e`: Playwright, проекты `chromium` (всё, кроме `e2e/prod-smoke`, `e2e/flows` и блокировки входа), `flows` (`e2e/flows/`: сквозные сценарии, которые меняют данные, после основного набора, за собой убирают) и `lockout` (`e2e/security/lockout.spec.ts`, после основного набора). Без `BASE_URL` сам поднимает dev-сервер.
 - `npm run test:prod-smoke`: проверки развёрнутого сайта без входа (`BASE_URL`, `SMOKE_WWW_URL`, `EXPECT_VERSION`).
 - `npm run build:tools`: скрипт сброса для образа tools, компиляция в `dist/reset-demo.mjs` (esbuild).
-- `npm run screenshots`: автоскриншоты всех экранов из `e2e/screens.ts` в 360 и 1440 px. Без запущенного сервера сам поднимает `next dev`.
+- `npm run screenshots`: автоскриншоты всех экранов из `e2e/screens.ts` в 360 и 1440 px, основные экраны ещё и в тёмной теме (`*-dark.png`). Без запущенного сервера сам поднимает `next dev`.
+- `npm run brand:assets`: логотипы без фона (`public/brand/`) и иконки PWA (`public/icons/`, `src/app/icon.png`) из `docs/process/design/`; результат коммитится.
 - `npm run db:migrate`: применить миграции (`prisma migrate deploy`). Новая миграция в разработке: `npx prisma migrate dev --name <имя>`.
 - `npm run demo:reset`: удалить все данные и засеять демо заново (даты от «сегодня» по Москве). Нужны `DEMO_PASSWORD_*` в `.env`. Это же `prisma db seed`.
 - `npm run submission:archive`: zip исходников с историей git для жюри в `dist-submission/` с проверкой на секреты.

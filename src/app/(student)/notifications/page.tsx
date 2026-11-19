@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { BackButton } from "@/components/BackButton";
 import { NormChip } from "@/components/NormChip";
+import { PendingSubmit } from "@/components/PendingSubmit";
 import { formatDay, formatTime } from "@/lib/format-date";
 import { toDateKey } from "@/lib/moscow-date";
 import { normLabel } from "@/lib/norm-label";
@@ -36,18 +37,18 @@ export default async function NotificationsPage() {
   }
 
   return (
-    <>
+    <div className="max-w-4xl">
       <BackButton fallbackHref="/" />
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Уведомления</h1>
         {unread > 0 ? (
           <form action={markAllRead}>
-            <button
-              type="submit"
+            <PendingSubmit
+              pendingText="Отмечаем…"
               className="border-ink-muted inline-flex min-h-11 items-center rounded-md border px-4"
             >
               Отметить все прочитанными
-            </button>
+            </PendingSubmit>
           </form>
         ) : null}
       </div>
@@ -111,6 +112,6 @@ export default async function NotificationsPage() {
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, useEffect } from "react";
+import { type FormEvent, type ReactNode, type RefObject, useEffect, useState } from "react";
 
 import type { FormState } from "@/lib/form-state";
 
@@ -97,4 +97,31 @@ export function SubmitButton({ pending, children }: { pending: boolean; children
       {pending ? "Отправляем…" : children}
     </button>
   );
+}
+
+export const OFFLINE_MESSAGE =
+  "Нет соединения с интернетом. Данные не отправлены: проверьте связь и нажмите ещё раз.";
+
+/**
+ * Без сети форма не отправляется: вместо страницы ошибки — понятное сообщение у формы.
+ * onSubmit с preventDefault останавливает и action формы (React его не вызывает).
+ */
+export function useOfflineGuard() {
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const clear = () => setOffline(false);
+    window.addEventListener("online", clear);
+    return () => window.removeEventListener("online", clear);
+  }, []);
+  return {
+    offlineMessage: offline ? OFFLINE_MESSAGE : undefined,
+    onSubmit: (event: FormEvent<HTMLFormElement>) => {
+      if (navigator.onLine) {
+        setOffline(false);
+        return;
+      }
+      event.preventDefault();
+      setOffline(true);
+    },
+  };
 }

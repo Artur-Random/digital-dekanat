@@ -16,13 +16,13 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** На телефоне нижняя панель из 5 вкладок, на десктопе та же структура слева. */
+/** На телефоне нижняя панель из 5 вкладок, на ПК та же структура в закреплённой колонке слева. */
 export function StudentNav() {
   const pathname = usePathname();
   return (
     <nav
       aria-label="Разделы"
-      className="border-border bg-surface safe-bottom fixed inset-x-0 bottom-0 z-20 border-t pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:static md:w-56 md:shrink-0 md:border-t-0 md:border-r md:p-0"
+      className="border-border bg-surface safe-bottom fixed inset-x-0 bottom-0 z-20 border-t pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] md:sticky md:top-0 md:h-dvh md:w-60 md:shrink-0 md:self-start md:overflow-y-auto md:border-t-0 md:border-r md:p-0"
     >
       <ul className="grid grid-cols-5 md:flex md:flex-col md:gap-1 md:p-3">
         {ITEMS.map(({ href, label, icon: Icon }) => {

@@ -9,7 +9,7 @@ export function ConceptBanner() {
       data-testid="concept-banner"
       className="border-border bg-notice text-notice-ink safe-top border-b"
     >
-      <div className="safe-x mx-auto flex max-w-5xl items-start gap-2 py-2 text-sm">
+      <div className="safe-x mx-auto flex max-w-[96rem] items-start gap-2 py-2 text-sm lg:px-8">
         <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
         <p>{CONCEPT_BANNER_TEXT}</p>
       </div>

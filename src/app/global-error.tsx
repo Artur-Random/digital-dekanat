@@ -1,6 +1,6 @@
 "use client";
 
-import "@fontsource-variable/golos-text";
+import "@/fonts/golos-text/golos-text.css";
 import "./globals.css";
 
 import { ConceptBanner } from "@/components/ConceptBanner";
@@ -18,7 +18,7 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
         <ConceptBanner />
         <main
           id="main"
-          className="safe-x mx-auto w-full max-w-5xl flex-1 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+          className="safe-x mx-auto w-full max-w-[96rem] flex-1 pt-8 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:px-8"
         >
           <h1 className="text-2xl font-semibold">Что-то пошло не так</h1>
           <p className="text-ink-muted mt-4">Сервис временно недоступен. Попробуйте ещё раз.</p>
