@@ -2604,3 +2604,11 @@ CLAUDE.md, раздел «Деплой»: да, приведи в соответ
 
 В конце добавь запись в PROCESS.md.
 ~~~~
+
+### 2026-11-20 15:41 МСК
+
+~~~~
+Да, отметь в docs/submission/README.md описание процесса готовым: docs/submission/studcab-process.pdf (8 страниц, собран 20.11, проверен Кириллом). Ссылка для формы: https://github.com/Artur-Random/digital-dekanat/blob/main/docs/submission/studcab-process.pdf. В разделе «Разделы PDF» поставь у всех шести «готово». Видео пока в TODO: запишет и смонтирует Максим 21.11, монтажный редактор допишем в tools.md, когда станет известен.
+
+В конце добавь запись в PROCESS.md.
+~~~~
