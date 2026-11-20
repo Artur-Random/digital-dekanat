@@ -7,10 +7,9 @@ name: uptime
 
 on:
   schedule:
-    # Hourly while the repository is private (2000 Actions minutes per month).
-    # After the repository becomes public, switch to "*/15 * * * *".
+    # Every 15 minutes since the repository became public (it was hourly while private).
     # GitHub delays or drops scheduled runs under load: in practice gaps were 5-7 hours.
-    - cron: "17 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
